@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="global.js"></script>
+    <script src="getTrack.js"></script>
+    <script src="res/p5.min.js"></script>
+    <script src="res/p5.sound.js"></script>
+    <script src="sketch.js"></script>
+    <title>OctaBeat</title>
+    <script>
+      const process = (file) => {
+        let fr = new FileReader();
+        fr.onload = async () => {
+          //console.log(fr.result);
+          var track = await getTrack(fr.result);
+          document.getElementById("load").style.display = "none";
+          document.getElementById("game").style.display = "block";
+          start(track);
+        };
+        fr.readAsText(file);
+      };
+    </script>
+  </head>
+  <body>
+    <div id="load">
+      <p>upload .osu file</p>
+      <form>
+        <input
+          type="file"
+          id="upload"
+          name="filename"
+          onchange="process(this.files[0])"
+        />
+      </form>
+    </div>
+    <main id="game" style="text-align: center"></main>
+  </body>
+</html>
