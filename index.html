@@ -17,6 +17,10 @@
         padding: 0;
         overflow: hidden;
       }
+      #upload {
+        color: transparent;
+        /* opacity: 0; */
+      }
     </style>
     <script>
       const process = (file) => {
@@ -24,9 +28,11 @@
         fr.onload = async () => {
           //console.log(fr.result);
           var track = await getTrack(fr.result);
+          start(track);
+          let upload = document.getElementById("upload");
+          // upload.style.opacity = "0";
           document.getElementById("load").style.display = "none";
           document.getElementById("game").style.display = "block";
-          start(track);
         };
         fr.readAsText(file);
       };
@@ -39,6 +45,7 @@
         <input
           type="file"
           id="upload"
+          title=""
           name="filename"
           onchange="process(this.files[0])"
         />

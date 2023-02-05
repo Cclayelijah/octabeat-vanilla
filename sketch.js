@@ -9,6 +9,7 @@ let maxCombo = 0;
 let startTime;
 let notesFinished = false;
 let songEnded = false;
+let endLoop = 0;
 let paused = true;
 let pauseTime = 0;
 let pauseStartTime;
@@ -19,15 +20,24 @@ let track = { approachRate: 3, notes: [], audio: "res/mayday/audio.mp3" };
 let approachTime;
 let notes = [];
 let activeNotes = [];
-let playedNotes = 0;
+let notesToPlay = []; // array of timing points to play hit sound;
+let numPlayedNotes = 0;
 let edgeLength;
 let cornerLength;
 let bubbles;
 
 function preload() {
-  soundFormats("mp3", "ogg");
+  soundFormats("mp3", "ogg", "wav");
   song = loadSound(track.audio);
   myFont = loadFont("res/Inconsolata-Regular.ttf");
+  hitNormal = loadSound("res/sounds/low-tom.wav");
+  hitWhistle = loadSound("res/sounds/low-tom.wav");
+  hitFinish = loadSound("res/sounds/low-tom.wav");
+  hitClap = loadSound("res/sounds/low-tom.wav");
+  endingCredits = loadSound("res/sounds/credits.wav");
+  wedidit = loadSound("res/sounds/wedidit.wav");
+  cheer = loadSound("res/sounds/cheer.wav");
+  missCrash = loadSound("res/sounds/break.wav");
 }
 
 function setup() {
@@ -110,22 +120,42 @@ function pause() {
   console.log("pause");
 }
 
+function playSound(hitSound) {
+  switch (hitSound) {
+    case 0:
+      hitNormal.play();
+      break;
+    case 1:
+      hitWhistle.play();
+      break;
+    case 2:
+      hitFinish.play();
+      break;
+    case 3:
+      hitClap.play();
+      break;
+  }
+}
+
 function hit() {
   score += 100 + 3 * combo;
   combo++;
-  // console.log("Score: " + score);
-  // console.log("Combo: " + combo);
+  if (combo > maxCombo) maxCombo = combo;
 }
 
 function miss() {
-  // todo play crash sound if combo > 25
-  if (combo > maxCombo) maxCombo = combo;
+  if (combo > 10) missCrash.play();
   combo = 0;
   // console.log("miss");
 }
 
 function displayResults(p5) {
-  // todo play sound
+  if (endLoop === 0) {
+    endingCredits.play();
+    cheer.play();
+    cheer.onended(() => wedidit.play());
+  }
+  endLoop++;
   background(0);
   fill(255);
   stroke(0);
@@ -140,7 +170,7 @@ function keyPressed() {
   // console.log(keyCode);
   if (keyCode === 32) {
     if (notesFinished) {
-      console.log("hello world");
+      console.log("stage complete");
       songEnded = true;
       song.stop();
     } else paused ? play() : pause();
@@ -148,14 +178,14 @@ function keyPressed() {
   }
   if (keyCode === 13) {
     if (notesFinished) {
-      console.log("hello world");
+      console.log("stage complete");
       songEnded = true;
       song.stop();
     } else paused ? play() : pause();
   }
   if (keyCode === 27) {
     if (notesFinished) {
-      console.log("hello world");
+      console.log("stage complete");
       songEnded = true;
       song.stop();
     } else paused ? play() : pause();
@@ -226,23 +256,35 @@ function draw() {
       return ellipse(b.x, b.y, BUBBLE_SIZE);
     });
 
-    // if (paused) return;
     fill(239, 35, 60);
 
     try {
-      if (notes.length === 0 && activeNotes.length === 0 && playedNotes > 0) {
+      if (
+        notes.length === 0 &&
+        activeNotes.length === 0 &&
+        numPlayedNotes > 0
+      ) {
         notesFinished = true;
         return;
       }
+      // notesToPlay
+      if (notesToPlay.length > 0) {
+        let note = notesToPlay[0];
+        if (note.time < playTime) {
+          playSound(note.sound);
+          notesToPlay.shift();
+        }
+      }
+      // notes
       if (notes.length > 0) {
         let nextNote = notes[0];
         if (playTime > nextNote.time - approachTime) {
-          playedNotes++;
+          numPlayedNotes++;
           activeNotes.push(nextNote);
           notes.shift();
         }
       }
-      // console.log(activeNotes);
+      // activeNotes
       if (activeNotes.length > 0) {
         activeNotes.forEach((note, i) => {
           const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
@@ -254,6 +296,7 @@ function draw() {
           bubbles.forEach((b) => {
             const d = dist(note.xPos, note.yPos, b.x, b.y);
             if (d < BUBBLE_SIZE / 2 && !note.played && b.active) {
+              notesToPlay.push({ time: note.time, sound: note.hitSound });
               hit();
               note.played = true;
               activeNotes.splice(i, 1);

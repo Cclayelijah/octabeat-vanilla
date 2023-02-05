@@ -67,10 +67,22 @@ async function extract(contents) {
     const y = line.slice(0, line.indexOf(","));
     line = line.slice(line.indexOf(",") + 1);
     const time = Number(line.slice(0, line.indexOf(",")));
+    line = line.slice(line.indexOf(",") + 1);
+    const type = Number(line.slice(0, line.indexOf(",")));
+    // 0: Hit circle
+    // 1: Slider
+    // 3: Spinner
+    // 7: osu!mania hold
+    line = line.slice(line.indexOf(",") + 1);
+    const hitSound = Number(line.slice(0, line.indexOf(",")));
+    // 0: Normal
+    // 1: Whistle
+    // 2: Finish
+    // 3: Clap
     const path = getPath(x, y);
     // console.log(`path:${path}, time:${time}`);
     // console.log(`x:${x}, y:${y}, time:${time}`);
-    notes.push({ ...path, time, played: false });
+    notes.push({ ...path, time, type, hitSound, played: false });
   });
 
   return { title, approachRate, notes };
