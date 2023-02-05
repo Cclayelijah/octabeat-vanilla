@@ -10,6 +10,14 @@
     <script src="res/p5.sound.js"></script>
     <script src="sketch.js"></script>
     <title>OctaBeat</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
     <script>
       const process = (file) => {
         let fr = new FileReader();
@@ -24,7 +32,7 @@
       };
     </script>
   </head>
-  <body style="background-color: #cccccc; color: #ffffff; text-align: center">
+  <body style="background-color: #222222; color: #ffffff; text-align: center">
     <div id="load">
       <p>upload .osu file</p>
       <form>
@@ -36,6 +44,6 @@
         />
       </form>
     </div>
-    <main id="game" style="text-align: center"></main>
+    <main id="game" style="text-align: center" hidden></main>
   </body>
 </html>
