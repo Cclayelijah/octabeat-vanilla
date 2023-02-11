@@ -3,6 +3,7 @@ p5.disableFriendlyErrors = true; // disables FES to boost performance
 let SCREEN;
 let HALF;
 let BUBBLE_SIZE = 30;
+const DELAY = 35;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
@@ -13,7 +14,7 @@ let endLoop = 0;
 let paused = true;
 let pauseTime = 0;
 let pauseStartTime;
-let playTime; // curr - start - pauseTime;
+let playTime; // currTime - startTime - pauseTime - DELAY;
 let song;
 let songDuration;
 let track = { approachRate: 3, notes: [], audio: "res/mayday/audio.mp3" };
@@ -228,7 +229,7 @@ function draw() {
     if (paused) {
       timePaused += new Date() - pauseStartTime;
     }
-    playTime = new Date() - startTime - timePaused;
+    playTime = new Date() - startTime - timePaused - DELAY;
     // line
     stroke(255, 0, 0);
     strokeWeight(10);
