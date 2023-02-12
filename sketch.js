@@ -143,6 +143,10 @@ function playSound(hitSound) {
     case 3:
       hitClap.play();
       break;
+    default:
+      console.log("hitSound:" + hitSound);
+      hitNormal.play();
+      break;
   }
 }
 
@@ -157,7 +161,7 @@ function miss() {
   combo = 0;
 }
 
-function displayResults(p5) {
+function displayResults() {
   if (endLoop === 0) {
     endingCredits.play();
     applause.play();
