@@ -1,5 +1,4 @@
 // var { readtext } = require("node:fs/promises");
-// const CIRCLE_SIZE = 30;
 // const paths = [
 //     [0, 1],
 //     [1, 1],
@@ -16,6 +15,7 @@ function getPath(osuX, osuY) {
   const maxY = 384;
   let x = 1;
   let y = 1;
+  let path = 0;
 
   if (osuX < (maxX / 3) * 2) x = 0;
   if (osuX < maxX / 3) x = -1;
@@ -28,13 +28,17 @@ function getPath(osuX, osuY) {
       x = x < 0 ? -1 : 1;
     }
   }
-  if (Math.abs(x) === Math.abs(y)) {
-    // if equal, they aren't 0.
-    x = (Math.sqrt(2) / 2) * x; // time by x to get sign.
-    y = (Math.sqrt(2) / 2) * y;
-  }
 
-  return { xPath: x, yPath: y, xPos: CIRCLE_SIZE * x, yPos: CIRCLE_SIZE * y };
+  // if (x == 0 && y == 1) path = 0;
+  if (x == 1 && y == 1) path = 1;
+  if (x == 1 && y == 0) path = 2;
+  if (x == 1 && y == -1) path = 3;
+  if (x == 0 && y == -1) path = 4;
+  if (x == -1 && y == -1) path = 5;
+  if (x == -1 && y == 0) path = 6;
+  if (x == -1 && y == 1) path = 7;
+
+  return path;
 }
 
 async function extract(contents) {
@@ -82,7 +86,7 @@ async function extract(contents) {
     const path = getPath(x, y);
     // console.log(`path:${path}, time:${time}`);
     // console.log(`x:${x}, y:${y}, time:${time}`);
-    notes.push({ ...path, time, type, hitSound, played: false });
+    notes.push({ path, time, type, hitSound, played: false });
   });
 
   return { title, approachRate, notes };

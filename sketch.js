@@ -1,8 +1,8 @@
-// const BUBBLE_SIZE = 30;
+// const NOTE_SIZE = 30;
 p5.disableFriendlyErrors = true; // disables FES to boost performance
 let SCREEN;
 let HALF;
-let BUBBLE_SIZE = 30;
+let NOTE_SIZE;
 const DELAY = 35;
 let score = 0;
 let combo = 0;
@@ -25,7 +25,8 @@ let notesToPlay = []; // array of timing points to play hit sound;
 let numPlayedNotes = 0;
 let edgeLength;
 let cornerLength;
-let bubbles;
+let anchorPoints;
+let landed;
 
 function preload() {
   soundFormats("mp3", "ogg", "wav");
@@ -46,16 +47,18 @@ function setup() {
   const height = windowHeight;
   SCREEN = width >= height ? height : width;
   HALF = SCREEN / 2;
-  BUBBLE_SIZE = SCREEN / 30;
+  NOTE_SIZE = SCREEN / 60;
+  ellipseMode(RADIUS);
   edgeLength = SCREEN / 2 - 75;
   cornerLength =
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
+  landed = [false, false, false, false, false, false, false, false];
 
   createCanvas(SCREEN, SCREEN);
   textFont(myFont);
   textSize(24);
 
-  bubbles = [
+  anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
     { x: HALF + cornerLength, y: HALF - cornerLength, active: false },
     { x: HALF + edgeLength, y: HALF, active: false },
@@ -77,7 +80,7 @@ function windowResized() {
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
   resizeCanvas(SCREEN, SCREEN);
 
-  bubbles = [
+  anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
     { x: HALF + cornerLength, y: HALF - cornerLength, active: false },
     { x: HALF + edgeLength, y: HALF, active: false },
@@ -138,7 +141,7 @@ function playSound(hitSound) {
   }
 }
 
-function hit() {
+function hit(region) {
   score += 100 + 3 * combo;
   combo++;
   if (combo > maxCombo) maxCombo = combo;
@@ -147,7 +150,6 @@ function hit() {
 function miss() {
   if (combo > 10) missCrash.play();
   combo = 0;
-  // console.log("miss");
 }
 
 function displayResults(p5) {
@@ -193,17 +195,92 @@ function keyPressed() {
   }
 }
 
-const closestBubble = () => {
+const activeSlice = () => {
   let shortestLength = SCREEN;
-  let shortestBubble;
-  bubbles.forEach((b, i) => {
+  let slice;
+  anchorPoints.forEach((b, i) => {
     const d = dist(b.x, b.y, mouseX, mouseY);
     if (shortestLength > d) {
       shortestLength = d;
-      shortestBubble = i;
+      slice = i;
     }
   });
-  return shortestBubble;
+  return slice;
+};
+
+const slices = () => {
+  let lastAngle = 0;
+  for (let i = 0; i < 8; i++) {
+    if (i === activeSlice()) {
+      fill(190, 183, 223);
+      strokeWeight(0);
+      arc(
+        0,
+        0,
+        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3,
+        lastAngle,
+        lastAngle + radians(45)
+      );
+    } else {
+      fill(0);
+      strokeWeight(0);
+      arc(
+        0,
+        0,
+        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3,
+        lastAngle,
+        lastAngle + radians(45)
+      );
+    }
+    lastAngle += radians(45);
+  }
+};
+
+const landingRegion = () => {
+  let lastAngle = 0;
+  for (let i = 0; i < 8; i++) {
+    if (landed[i]) {
+      fill(0, 255, 51); // green
+      arc(
+        0,
+        0,
+        edgeLength + NOTE_SIZE,
+        edgeLength + NOTE_SIZE,
+        lastAngle,
+        lastAngle + radians(45)
+      );
+    } else {
+      fill(190, 183, 223); // purple
+      arc(
+        0,
+        0,
+        edgeLength + NOTE_SIZE,
+        edgeLength + NOTE_SIZE,
+        lastAngle,
+        lastAngle + radians(45)
+      );
+    }
+    erase();
+    arc(
+      0,
+      0,
+      edgeLength - NOTE_SIZE,
+      edgeLength - NOTE_SIZE,
+      lastAngle,
+      lastAngle + radians(45)
+    );
+    noErase();
+    lastAngle += radians(45);
+  }
+};
+
+const barNote = (radius, notePath) => {
+  const angle = radians(45 * notePath);
+  // stroke(255);
+  // if (notePath === activeSlice()) stroke(0);
+  arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
 function draw() {
@@ -230,35 +307,29 @@ function draw() {
       timePaused += new Date() - pauseStartTime;
     }
     playTime = new Date() - startTime - timePaused - DELAY;
-    // line
+    // progress bar
     stroke(255, 0, 0);
-    strokeWeight(10);
+    strokeWeight(12);
     x = map(playTime, 0, songDuration, 0, SCREEN);
     line(0, 0, x, 0);
 
-    noStroke();
+    translate(HALF, HALF);
+    rotate(radians(-90 - 45 / 2));
+
+    // HIT ZONE
+    noFill();
+    strokeWeight(4);
+    stroke(255);
+    landingRegion();
+
+    // pie slices
     strokeWeight(0);
+    slices();
 
-    // collission bubbles - draw bubbles
-    bubbles.map((b, i) => {
-      if (paused) {
-        fill(255);
-      } else {
-        if (i === closestBubble()) {
-          b.active = true;
-          // fill(143, 203, 155); // make it green
-          fill(0, 255, 51);
-        } else {
-          b.active = false;
-          // fill(255, 255, 200); // yellow
-          fill(255);
-        }
-      }
-      return ellipse(b.x, b.y, BUBBLE_SIZE);
-    });
-
-    fill(239, 35, 60);
-
+    // NOTES
+    noFill();
+    strokeWeight(NOTE_SIZE * 2);
+    stroke(255, 0, 0);
     try {
       if (
         notes.length === 0 &&
@@ -273,6 +344,10 @@ function draw() {
         let note = notesToPlay[0];
         if (note.time < playTime) {
           playSound(note.sound);
+          landed[note.path] = true; // turn green
+          setTimeout(() => {
+            landed[note.path] = false;
+          }, 100);
           notesToPlay.shift();
         }
       }
@@ -289,27 +364,32 @@ function draw() {
       if (activeNotes.length > 0) {
         activeNotes.forEach((note, i) => {
           const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
-          const distance = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
-          note.xPos = distance * note.xPath + HALF;
-          note.yPos = distance * note.yPath + HALF;
-          ellipse(note.xPos, note.yPos, BUBBLE_SIZE);
+          const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
+          // note.xPos = distance * note.xPath + HALF;
+          // note.yPos = distance * note.yPath + HALF;
+          // ellipse(note.xPos, note.yPos, NOTE_SIZE);
+          barNote(radius, note.path);
           //collision check
-          bubbles.forEach((b) => {
-            const d = dist(note.xPos, note.yPos, b.x, b.y);
-            if (d < BUBBLE_SIZE / 2 && !note.played && b.active) {
-              notesToPlay.push({ time: note.time, sound: note.hitSound });
-              hit();
-              note.played = true;
-              activeNotes.splice(i, 1);
-            }
-          });
+          if (
+            edgeLength - radius > -(NOTE_SIZE * 2) &&
+            edgeLength - radius < NOTE_SIZE * 2 &&
+            note.path === activeSlice() &&
+            !note.played
+          ) {
+            // stroke of note is touching stroke of landing region
+            notesToPlay.push({
+              time: note.time,
+              sound: note.hitSound,
+              path: note.path,
+            });
+            hit(note.path);
+            note.played = true;
+            activeNotes.splice(i, 1);
+          }
           if (note.played) return;
 
           //exit check
-          if (
-            Math.abs(note.xPos) > SCREEN / 2 + HALF ||
-            Math.abs(note.yPos) > SCREEN / 2 + HALF
-          ) {
+          if (radius > edgeLength + NOTE_SIZE * 4) {
             activeNotes.shift();
             if (!note.played) {
               miss();
@@ -322,8 +402,14 @@ function draw() {
       pause();
     }
 
-    // BLUE ANCHOR CIRCLE
-    fill(35, 116, 171);
-    ellipse(HALF, HALF, BUBBLE_SIZE);
+    rotate(radians(90 + 45 / 2));
+    translate(-HALF, -HALF);
+    noStroke();
+    strokeWeight(0);
+
+    // ANCHOR CIRCLE
+    fill(35, 116, 171); // blue
+    fill(255);
+    ellipse(HALF, HALF, NOTE_SIZE);
   }
 }
