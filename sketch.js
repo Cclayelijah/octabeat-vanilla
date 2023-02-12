@@ -318,7 +318,8 @@ function draw() {
 
     // HIT ZONE
     noFill();
-    strokeWeight(0);
+    strokeWeight(4);
+    stroke(255);
     landingRegion();
 
     // pie slices
