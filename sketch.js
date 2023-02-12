@@ -32,14 +32,14 @@ function preload() {
   soundFormats("mp3", "ogg", "wav");
   song = loadSound(track.audio);
   myFont = loadFont("res/Inconsolata-Regular.ttf");
-  hitNormal = loadSound("res/sounds/low-tom.wav");
-  hitWhistle = loadSound("res/sounds/low-tom.wav");
-  hitFinish = loadSound("res/sounds/low-tom.wav");
-  hitClap = loadSound("res/sounds/low-tom.wav");
+  hitNormal = loadSound("res/sounds/normal-hit.wav");
+  hitWhistle = loadSound("res/sounds/normal-hitwhistle.wav");
+  hitFinish = loadSound("res/sounds/normal-hitfinish.wav");
+  hitClap = loadSound("res/sounds/normal-hitclap.wav");
   endingCredits = loadSound("res/sounds/credits.wav");
   wedidit = loadSound("res/sounds/wedidit.wav");
-  cheer = loadSound("res/sounds/cheer.wav");
-  missCrash = loadSound("res/sounds/break.wav");
+  applause = loadSound("res/sounds/applause.wav");
+  comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
 }
 
 function setup() {
@@ -53,6 +53,11 @@ function setup() {
   cornerLength =
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
   landed = [false, false, false, false, false, false, false, false];
+
+  hitNormal.setVolume(0.5);
+  hitWhistle.setVolume(0.5);
+  hitFinish.setVolume(0.5);
+  hitClap.setVolume(0.5);
 
   createCanvas(SCREEN, SCREEN);
   textFont(myFont);
@@ -148,15 +153,15 @@ function hit(region) {
 }
 
 function miss() {
-  if (combo > 10) missCrash.play();
+  if (combo > 10) comboBreak.play();
   combo = 0;
 }
 
 function displayResults(p5) {
   if (endLoop === 0) {
     endingCredits.play();
-    cheer.play();
-    cheer.onended(() => wedidit.play());
+    applause.play();
+    applause.onended(() => wedidit.play());
   }
   endLoop++;
   background(0);
