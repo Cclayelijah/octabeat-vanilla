@@ -96,5 +96,6 @@ const getTrack = async (contents) => {
   // const path = "/Easy.txt";
   const data = await extract(contents);
   // console.log(data);
-  return { ...data, audio: "/res/mayday/audio.mp3" };
+  // return { ...data, audio: "/res/mayday/audio.mp3" };
+  return { ...data };
 };
