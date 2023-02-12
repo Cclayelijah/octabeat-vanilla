@@ -6,6 +6,7 @@ let NOTE_SIZE;
 const DELAY = 35;
 let score = 0;
 let combo = 0;
+let notesPlayed;
 let maxCombo = 0;
 let startTime;
 let notesFinished = false;
@@ -20,7 +21,7 @@ let songDuration;
 let track = {
   approachRate: 3,
   notes: [],
-  audio: "res/tracks/undead/audio.mp3",
+  audio: "res/tracks/marblesoda/audio.mp3",
 };
 let approachTime;
 let notes = [];
@@ -117,6 +118,7 @@ function start(data) {
   approachTime = Math.floor(3000 / track.approachRate + 300);
   paused = false;
   console.log("start");
+  notesPlayed = 0;
 }
 
 function play() {
@@ -180,6 +182,10 @@ function displayResults() {
   text("Score: " + nfc(score), SCREEN / 2, SCREEN / 2 - 100);
   textSize(48);
   text("Max Combo: " + nfc(maxCombo), SCREEN / 2, SCREEN / 2);
+  if (notesPlayed === maxCombo) {
+    textSize(24);
+    text("Full Combo!", SCREEN / 2, SCREEN / 2 + 50);
+  }
 }
 
 function keyPressed() {
@@ -362,6 +368,7 @@ function draw() {
             landed[note.path] = false;
           }, 100);
           notesToPlay.shift();
+          notesPlayed++;
         }
       }
       // notes
