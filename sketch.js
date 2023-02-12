@@ -17,7 +17,11 @@ let pauseStartTime;
 let playTime; // currTime - startTime - pauseTime - DELAY;
 let song;
 let songDuration;
-let track = { approachRate: 3, notes: [], audio: "res/mayday/audio.mp3" };
+let track = {
+  approachRate: 3,
+  notes: [],
+  audio: "res/tracks/undead/audio.mp3",
+};
 let approachTime;
 let notes = [];
 let activeNotes = [];
