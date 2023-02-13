@@ -2,11 +2,11 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
 let SCREEN;
 let HALF;
+let PX;
 let NOTE_SIZE;
 const DELAY = 35;
 let score = 0;
 let combo = 0;
-let notesPlayed;
 let maxCombo = 0;
 let startTime;
 let notesFinished = false;
@@ -16,22 +16,60 @@ let paused = true;
 let pauseTime = 0;
 let pauseStartTime;
 let playTime; // currTime - startTime - pauseTime - DELAY;
-let song;
 let songDuration;
 let track = {
   approachRate: 3,
   notes: [],
-  audio: "res/tracks/marblesoda/audio.mp3",
+  audio: "res/tracks/miiro/audio.mp3",
 };
 let approachTime;
 let notes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
-let numPlayedNotes = 0;
+let numPlayedNotes;
 let edgeLength;
 let cornerLength;
 let anchorPoints;
 let landed;
+
+// sound files
+let song,
+  hitNormal,
+  hitWhistle,
+  hitFinish,
+  hitClap,
+  endingCredits,
+  applause,
+  wedidit,
+  comboBreak;
+// image files
+let endbg,
+  comboIcon,
+  hitsIcon,
+  missesIcon,
+  btnBack,
+  btnContinue,
+  btnRetry,
+  rankS,
+  rankA,
+  rankB,
+  rankC,
+  rankD,
+  text0,
+  text1,
+  text2,
+  text3,
+  text4,
+  text5,
+  text6,
+  text7,
+  text8,
+  text9,
+  textComma,
+  textDot,
+  sectionFail,
+  sectionPass,
+  rightArrow;
 
 function preload() {
   soundFormats("mp3", "ogg", "wav");
@@ -42,9 +80,38 @@ function preload() {
   hitFinish = loadSound("res/sounds/normal-hitfinish.wav");
   hitClap = loadSound("res/sounds/normal-hitclap.wav");
   endingCredits = loadSound("res/sounds/credits.wav");
-  wedidit = loadSound("res/sounds/wedidit.wav");
   applause = loadSound("res/sounds/applause.wav");
+  wedidit = loadSound("res/sounds/wedidit.wav");
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
+
+  // images
+  endbg = loadImage("res/images/endbg.png");
+  comboIcon = loadImage("res/images/combo.png");
+  hitsIcon = loadImage("res/images/hits.png");
+  missesIcon = loadImage("res/images/misses.png");
+  btnBack = createImage("res/images/pause-back.png");
+  btnContinue = createImage("res/images/pause-continue.png");
+  btnRetry = createImage("res/images/pause-retry.png");
+  rankS = loadImage("res/images/ranking-S.png");
+  rankA = loadImage("res/images/ranking-A.png");
+  rankB = loadImage("res/images/ranking-B.png");
+  rankC = loadImage("res/images/ranking-C.png");
+  rankD = loadImage("res/images/ranking-D.png");
+  text0 = loadImage("res/images/score-0.png");
+  text1 = loadImage("res/images/score-1.png");
+  text2 = loadImage("res/images/score-2.png");
+  text3 = loadImage("res/images/score-3.png");
+  text4 = loadImage("res/images/score-4.png");
+  text5 = loadImage("res/images/score-5.png");
+  text6 = loadImage("res/images/score-6.png");
+  text7 = loadImage("res/images/score-7.png");
+  text8 = loadImage("res/images/score-8.png");
+  text9 = loadImage("res/images/score-9.png");
+  textComma = loadImage("res/images/score-comma.png");
+  textDot = loadImage("res/images/score-dot.png");
+  sectionFail = loadImage("res/images/section-fail.png");
+  sectionPass = loadImage("res/images/section-pass.png");
+  rightArrow = loadImage("res/images/right-arrow.png");
 }
 
 function setup() {
@@ -52,7 +119,8 @@ function setup() {
   const height = windowHeight;
   SCREEN = width >= height ? height : width;
   HALF = SCREEN / 2;
-  NOTE_SIZE = SCREEN / 60;
+  PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
+  NOTE_SIZE = 12 * PX;
   ellipseMode(RADIUS);
   edgeLength = SCREEN / 2 - 75;
   cornerLength =
@@ -85,6 +153,8 @@ function windowResized() {
   const height = windowHeight;
   SCREEN = width >= height ? height : width;
   HALF = SCREEN / 2;
+  PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
+  NOTE_SIZE = 12 * PX;
   edgeLength = SCREEN / 2 - 75;
   cornerLength =
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
@@ -118,7 +188,7 @@ function start(data) {
   approachTime = Math.floor(3000 / track.approachRate + 300);
   paused = false;
   console.log("start");
-  notesPlayed = 0;
+  numPlayedNotes = 0;
 }
 
 function play() {
@@ -150,7 +220,7 @@ function playSound(hitSound) {
       hitClap.play();
       break;
     default:
-      console.log("hitSound:" + hitSound);
+      // console.log("hitSound:" + hitSound);
       hitNormal.play();
       break;
   }
@@ -175,17 +245,21 @@ function displayResults() {
   }
   endLoop++;
   background(0);
+  image(endbg, 0, 0, SCREEN, SCREEN);
   fill(255);
   stroke(0);
+  strokeWeight(2);
   textAlign(CENTER);
   textSize(56);
-  text("Score: " + nfc(score), SCREEN / 2, SCREEN / 2 - 100);
+  text("Score: " + nfc(score), HALF, 550 * PX);
   textSize(48);
-  text("Max Combo: " + nfc(maxCombo), SCREEN / 2, SCREEN / 2);
-  if (notesPlayed === maxCombo) {
+  text("Max Combo: " + nfc(maxCombo), HALF, 600 * PX);
+  if (numPlayedNotes === maxCombo) {
     textSize(24);
-    text("Full Combo!", SCREEN / 2, SCREEN / 2 + 50);
+    text("Full Combo!", HALF, 640 * PX);
   }
+  // image(btnRetry, HALF - 75 * PX, 700 * PX, 150 * PX, 50 * PX);
+  // btnRetry.position(HALF, 700 * PX);
 }
 
 function keyPressed() {
@@ -297,15 +371,13 @@ const landingRegion = () => {
 
 const barNote = (radius, notePath) => {
   const angle = radians(45 * notePath);
-  // stroke(255);
-  // if (notePath === activeSlice()) stroke(0);
   arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
 function draw() {
   if (notesFinished && songEnded) {
     clear();
-    displayResults(p5);
+    displayResults();
   } else {
     background(0);
     // text
@@ -368,7 +440,6 @@ function draw() {
             landed[note.path] = false;
           }, 100);
           notesToPlay.shift();
-          notesPlayed++;
         }
       }
       // notes
