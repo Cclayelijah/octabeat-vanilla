@@ -85,7 +85,7 @@ function preload() {
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
 
   // images
-  endbg = loadImage("res/images/endbg.png");
+  endbg = loadImage("res/images/endbg.jpg");
   comboIcon = loadImage("res/images/combo.png");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
