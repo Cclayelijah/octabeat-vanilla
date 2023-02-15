@@ -1,4 +1,3 @@
-// const NOTE_SIZE = 30;
 p5.disableFriendlyErrors = true; // disables FES to boost performance
 let SCREEN;
 let HALF;
@@ -289,15 +288,40 @@ function keyPressed() {
 }
 
 const activeSlice = () => {
-  let shortestLength = SCREEN;
   let slice;
-  anchorPoints.forEach((b, i) => {
-    const d = dist(b.x, b.y, mouseX, mouseY);
-    if (shortestLength > d) {
-      shortestLength = d;
-      slice = i;
-    }
-  });
+  const up = keyIsDown(UP_ARROW) ? true : keyIsDown(87);
+  const right = keyIsDown(RIGHT_ARROW) ? true : keyIsDown(68);
+  const down = keyIsDown(DOWN_ARROW) ? true : keyIsDown(83);
+  const left = keyIsDown(LEFT_ARROW) ? true : keyIsDown(65);
+  // keys overide mouse
+  if (up && right) {
+    slice = 1;
+  } else if (down && right) {
+    slice = 3;
+  } else if (left && down) {
+    slice = 5;
+  } else if (left && up) {
+    slice = 7;
+  } else if (up) {
+    slice = 0;
+  } else if (right) {
+    slice = 2;
+  } else if (down) {
+    slice = 4;
+  } else if (left) {
+    slice = 6;
+  } else {
+    // mouse
+    let shortestLength = SCREEN;
+    anchorPoints.forEach((b, i) => {
+      const d = dist(b.x, b.y, mouseX, mouseY);
+      if (shortestLength > d) {
+        shortestLength = d;
+        slice = i;
+      }
+    });
+  }
+
   return slice;
 };
 
