@@ -423,10 +423,10 @@ function displayResults() {
   image(missesIcon, 450 * PX, 280 * PX, 60 * PX, 60 * PX);
   image(accuracyIcon, 450 * PX, 360 * PX, 60 * PX, 60 * PX);
   fill(255);
-  fill(241, 241, 241);
+  // fill(241, 241, 241);
+  fill(242, 242, 242);
   stroke(0);
   strokeWeight(3 * PX);
-  //Title
   textAlign(LEFT);
   textSize(40 * PX);
   text(track.title, 70 * PX, 80 * PX);
@@ -440,147 +440,152 @@ function displayResults() {
   textAlign(CENTER);
   textSize(80 * PX);
   text(nfc(score), HALF, 545 * PX);
-  textSize(20 * PX);
-  text("x" + nfc(numAttempts), HALF, 780 * PX);
   textAlign(RIGHT);
   textSize(48 * PX);
   image(maxComboIcon, 200 * PX, 575 * PX, 200 * PX, 80 * PX);
   text(nfc(maxCombo), 530 * PX, 630 * PX);
+  textSize(20 * PX);
+  text("x" + nfc(numAttempts), 740 * PX, 780 * PX);
+  textAlign(LEFT);
+  const seconds = Math.floor((songDuration / 1000) % 60);
+  const minutes = Math.floor(songDuration / 1000 / 60);
+  text(minutes + ":" + seconds, 60 * PX, 780 * PX);
 }
 
 function draw() {
-  if (notesFinished && songEnded) {
-    clear();
-    displayResults();
-  } else {
-    background(0);
-    // text
-    let fps = frameRate();
-    fill(255);
-    stroke(0);
-    textAlign(LEFT);
-    textSize(SCREEN / 15);
-    text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
-    textSize(SCREEN / 28);
-    text(nfc(accuracy) + "%", SCREEN / 80, SCREEN / 28);
-    textAlign(RIGHT);
-    textSize(SCREEN / 28);
-    text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
-    textSize(SCREEN / 66);
-    text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
+  displayResults();
+  // if (notesFinished && songEnded) {
+  //   clear();
+  //   displayResults();
+  // } else {
+  //   background(0);
+  //   // text
+  //   let fps = frameRate();
+  //   fill(255);
+  //   stroke(0);
+  //   textAlign(LEFT);
+  //   textSize(SCREEN / 15);
+  //   text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
+  //   textSize(SCREEN / 28);
+  //   text(nfc(accuracy) + "%", SCREEN / 80, SCREEN / 28);
+  //   textAlign(RIGHT);
+  //   textSize(SCREEN / 28);
+  //   text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
+  //   textSize(SCREEN / 66);
+  //   text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
 
-    let timePaused = pauseTime;
-    if (paused) {
-      timePaused += new Date() - pauseStartTime;
-    }
-    playTime = new Date() - startTime - timePaused - DELAY;
-    // progress bar
-    stroke(255, 0, 0);
-    strokeWeight(12);
-    x = map(playTime, 0, songDuration, 0, SCREEN);
-    line(0, 0, x, 0);
+  //   let timePaused = pauseTime;
+  //   if (paused) {
+  //     timePaused += new Date() - pauseStartTime;
+  //   }
+  //   playTime = new Date() - startTime - timePaused - DELAY;
+  //   // progress bar
+  //   stroke(255, 0, 0);
+  //   strokeWeight(12);
+  //   x = map(playTime, 0, songDuration, 0, SCREEN);
+  //   line(0, 0, x, 0);
 
-    translate(HALF, HALF);
-    rotate(radians(-90 - 45 / 2));
+  //   translate(HALF, HALF);
+  //   rotate(radians(-90 - 45 / 2));
 
-    // HIT ZONE
-    noFill();
-    strokeWeight(4);
-    stroke(255);
-    landingRegion();
+  //   // HIT ZONE
+  //   noFill();
+  //   strokeWeight(4);
+  //   stroke(255);
+  //   landingRegion();
 
-    // pie slices
-    strokeWeight(0);
-    slices();
+  //   // pie slices
+  //   strokeWeight(0);
+  //   slices();
 
-    // NOTES
-    noFill();
-    strokeWeight(NOTE_SIZE * 2);
-    stroke(255, 0, 0);
-    try {
-      if (
-        notes.length === 0 &&
-        activeNotes.length === 0 &&
-        numPlayedNotes > 0
-      ) {
-        notesFinished = true;
-        return;
-      }
-      // notesToPlay
-      if (notesToPlay.length > 0) {
-        let note = notesToPlay[0];
-        if (note.time < playTime) {
-          playSound(note.sound);
-          landed[note.path] = true; // turn green
-          setTimeout(() => {
-            landed[note.path] = false;
-          }, 100);
-          notesToPlay.shift();
-        }
-      }
-      // notes
-      if (notes.length > 0) {
-        let nextNote = notes[0];
-        if (playTime > nextNote.time - approachTime) {
-          numPlayedNotes++;
-          activeNotes.push(nextNote);
-          notes.shift();
-        }
-      }
-      // activeNotes
-      if (activeNotes.length > 0) {
-        activeNotes.forEach((note, i) => {
-          const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
-          const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
-          // note.xPos = distance * note.xPath + HALF;
-          // note.yPos = distance * note.yPath + HALF;
-          // ellipse(note.xPos, note.yPos, NOTE_SIZE);
-          barNote(radius, note.path);
-          //collision check
-          if (
-            edgeLength - radius > -(NOTE_SIZE * 2) &&
-            edgeLength - radius < NOTE_SIZE * 2 &&
-            note.path === activeSlice() &&
-            !note.played
-          ) {
-            // stroke of note is touching stroke of landing region
-            notesToPlay.push({
-              time: note.time,
-              sound: note.hitSound,
-              path: note.path,
-            });
-            hit(note.path);
-            note.played = true;
-            activeNotes.splice(i, 1);
-          }
-          if (note.played) return;
+  //   // NOTES
+  //   noFill();
+  //   strokeWeight(NOTE_SIZE * 2);
+  //   stroke(255, 0, 0);
+  //   try {
+  //     if (
+  //       notes.length === 0 &&
+  //       activeNotes.length === 0 &&
+  //       numPlayedNotes > 0
+  //     ) {
+  //       notesFinished = true;
+  //       return;
+  //     }
+  //     // notesToPlay
+  //     if (notesToPlay.length > 0) {
+  //       let note = notesToPlay[0];
+  //       if (note.time < playTime) {
+  //         playSound(note.sound);
+  //         landed[note.path] = true; // turn green
+  //         setTimeout(() => {
+  //           landed[note.path] = false;
+  //         }, 100);
+  //         notesToPlay.shift();
+  //       }
+  //     }
+  //     // notes
+  //     if (notes.length > 0) {
+  //       let nextNote = notes[0];
+  //       if (playTime > nextNote.time - approachTime) {
+  //         numPlayedNotes++;
+  //         activeNotes.push(nextNote);
+  //         notes.shift();
+  //       }
+  //     }
+  //     // activeNotes
+  //     if (activeNotes.length > 0) {
+  //       activeNotes.forEach((note, i) => {
+  //         const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
+  //         const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
+  //         // note.xPos = distance * note.xPath + HALF;
+  //         // note.yPos = distance * note.yPath + HALF;
+  //         // ellipse(note.xPos, note.yPos, NOTE_SIZE);
+  //         barNote(radius, note.path);
+  //         //collision check
+  //         if (
+  //           edgeLength - radius > -(NOTE_SIZE * 2) &&
+  //           edgeLength - radius < NOTE_SIZE * 2 &&
+  //           note.path === activeSlice() &&
+  //           !note.played
+  //         ) {
+  //           // stroke of note is touching stroke of landing region
+  //           notesToPlay.push({
+  //             time: note.time,
+  //             sound: note.hitSound,
+  //             path: note.path,
+  //           });
+  //           hit(note.path);
+  //           note.played = true;
+  //           activeNotes.splice(i, 1);
+  //         }
+  //         if (note.played) return;
 
-          //exit check
-          if (radius > edgeLength + NOTE_SIZE * 4) {
-            activeNotes.shift();
-            if (!note.played) {
-              miss();
-            }
-          }
-        });
-      }
-    } catch (e) {
-      console.log(e);
-      pause();
-    }
+  //         //exit check
+  //         if (radius > edgeLength + NOTE_SIZE * 4) {
+  //           activeNotes.shift();
+  //           if (!note.played) {
+  //             miss();
+  //           }
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     console.log(e);
+  //     pause();
+  //   }
 
-    rotate(radians(90 + 45 / 2));
-    translate(-HALF, -HALF);
+  //   rotate(radians(90 + 45 / 2));
+  //   translate(-HALF, -HALF);
 
-    // MOUSE LINE
-    strokeWeight(10 * PX);
-    stroke(35, 116, 171);
-    line(mouseX, mouseY, pmouseX, pmouseY);
+  //   // MOUSE LINE
+  //   strokeWeight(10 * PX);
+  //   stroke(35, 116, 171);
+  //   line(mouseX, mouseY, pmouseX, pmouseY);
 
-    // ANCHOR CIRCLE
-    noStroke();
-    strokeWeight(0);
-    fill(255);
-    ellipse(HALF, HALF, NOTE_SIZE);
-  }
+  //   // ANCHOR CIRCLE
+  //   noStroke();
+  //   strokeWeight(0);
+  //   fill(255);
+  //   ellipse(HALF, HALF, NOTE_SIZE);
+  // }
 }
