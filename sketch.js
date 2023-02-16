@@ -1,4 +1,6 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
+let WIDTH
+let HEIGHT
 let SCREEN;
 let HALF;
 let PX;
@@ -90,7 +92,7 @@ function preload() {
   missesIcon = loadImage("res/images/misses.png");
   btnBack = createImage("res/images/pause-back.png");
   btnContinue = createImage("res/images/pause-continue.png");
-  btnRetry = createImage("res/images/pause-retry.png");
+  btnRetry = createImg("res/images/pause-retry.png");
   rankS = loadImage("res/images/ranking-S.png");
   rankA = loadImage("res/images/ranking-A.png");
   rankB = loadImage("res/images/ranking-B.png");
@@ -114,9 +116,9 @@ function preload() {
 }
 
 function setup() {
-  const width = windowWidth;
-  const height = windowHeight;
-  SCREEN = width >= height ? height : width;
+  WIDTH = windowWidth;
+  HEIGHT = windowHeight;
+  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
   HALF = SCREEN / 2;
   PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
@@ -145,12 +147,16 @@ function setup() {
     { x: HALF - edgeLength, y: HALF, active: false },
     { x: HALF - cornerLength, y: HALF - cornerLength, active: false },
   ];
+
+  btnRetry.size(200 * PX, 65 * PX);
+  btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
+  btnRetry.hide()
 }
 
 function windowResized() {
-  const width = windowWidth;
-  const height = windowHeight;
-  SCREEN = width >= height ? height : width;
+  WIDTH = windowWidth;
+  HEIGHT = windowHeight;
+  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
   HALF = SCREEN / 2;
   PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
@@ -169,6 +175,9 @@ function windowResized() {
     { x: HALF - edgeLength, y: HALF, active: false },
     { x: HALF - cornerLength, y: HALF - cornerLength, active: false },
   ];
+
+  btnRetry.size(200 * PX, 65 * PX);
+  btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
 }
 
 function start(data) {
@@ -236,11 +245,22 @@ function miss() {
   combo = 0;
 }
 
+function retry(){
+  console.log("clicked retry")
+  if(btnRetry.mousePressed){
+    btnRetry.hide()
+  } 
+}
+
 function displayResults() {
   if (endLoop === 0) {
     endingCredits.play();
     applause.play();
     applause.onended(() => wedidit.play());
+    btnRetry.size(200 * PX, 65 * PX);
+    btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
+    btnRetry.mousePressed(retry);
+    btnRetry.show()
   }
   endLoop++;
   background(0);
@@ -257,8 +277,6 @@ function displayResults() {
     textSize(24);
     text("Full Combo!", HALF, 640 * PX);
   }
-  // image(btnRetry, HALF - 75 * PX, 700 * PX, 150 * PX, 50 * PX);
-  // btnRetry.position(HALF, 700 * PX);
 }
 
 function keyPressed() {
