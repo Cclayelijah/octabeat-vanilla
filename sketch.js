@@ -28,8 +28,12 @@ let notesToPlay = []; // array of timing points to play hit sound;
 let numPlayedNotes;
 let edgeLength;
 let cornerLength;
-let anchorPoints;
+let anchorPoints = [];
 let landed;
+let accuracy = 0; // numHits / numHits + numMisses * 2
+let numHits;
+let numMisses;
+// misses hold twice as much weight as hits.
 
 // sound files
 let song,
@@ -172,9 +176,11 @@ function windowResized() {
 }
 
 function start(data) {
+  console.log("start");
   track = data;
   console.log(track);
   notes = track.notes;
+  const AR = track.approachRate;
   song.setVolume(0.5);
   song.stop();
   song.play();
@@ -184,10 +190,12 @@ function start(data) {
   });
   startTime = new Date();
   pauseTime = 0;
-  approachTime = Math.floor(3000 / track.approachRate + 300);
+  approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   paused = false;
-  console.log("start");
   numPlayedNotes = 0;
+  numHits = 0;
+  numMisses = 0;
+  // todo reset other variables too
 }
 
 function play() {
@@ -225,13 +233,21 @@ function playSound(hitSound) {
   }
 }
 
+function adjustAccuracy() {
+  accuracy = Math.floor((100 * numHits) / (numHits + numMisses * 2));
+}
+
 function hit(region) {
-  score += 100 + 3 * combo;
+  numHits++;
+  adjustAccuracy();
+  score += 5000 + 93 * combo;
   combo++;
   if (combo > maxCombo) maxCombo = combo;
 }
 
 function miss() {
+  numMisses++;
+  adjustAccuracy();
   if (combo > 10) comboBreak.play();
   combo = 0;
 }
@@ -241,6 +257,9 @@ function displayResults() {
     endingCredits.play();
     applause.play();
     applause.onended(() => wedidit.play());
+    console.log("misses: " + numMisses);
+    console.log("hits: " + numHits);
+    console.log("accuracy: " + accuracy + "%");
   }
   endLoop++;
   background(0);
@@ -411,6 +430,8 @@ function draw() {
     textAlign(LEFT);
     textSize(SCREEN / 15);
     text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
+    textSize(SCREEN / 28);
+    text("%" + nfc(accuracy), SCREEN / 80, SCREEN / 28);
     textAlign(RIGHT);
     textSize(SCREEN / 28);
     text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
