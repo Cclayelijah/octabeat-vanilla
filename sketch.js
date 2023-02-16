@@ -31,9 +31,10 @@ let cornerLength;
 let anchorPoints = [];
 let landed;
 let accuracy = 0; // numHits / numHits + numMisses * 2
-let numHits;
-let numMisses;
-// misses hold twice as much weight as hits.
+let numHits = 0;
+let numMisses = 0;
+let numAttempts = 0;
+let dateTime;
 
 // sound files
 let song,
@@ -47,9 +48,10 @@ let song,
   comboBreak;
 // image files
 let endbg,
-  comboIcon,
   hitsIcon,
   missesIcon,
+  accuracyIcon,
+  maxComboIcon,
   btnBack,
   btnContinue,
   btnRetry,
@@ -88,10 +90,11 @@ function preload() {
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
 
   // images
-  endbg = loadImage("res/images/endbg.jpg");
-  comboIcon = loadImage("res/images/combo.png");
+  endbg = loadImage("res/images/endbg1.jpg");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
+  accuracyIcon = loadImage("res/images/accuracy.png");
+  maxComboIcon = loadImage("res/images/ranking-maxcombo.png");
   btnBack = createImage("res/images/pause-back.png");
   btnContinue = createImage("res/images/pause-continue.png");
   btnRetry = createImage("res/images/pause-retry.png");
@@ -136,6 +139,7 @@ function setup() {
   hitClap.setVolume(0.5);
 
   createCanvas(SCREEN, SCREEN);
+  noCursor();
   textFont(myFont);
   textSize(24);
 
@@ -195,6 +199,7 @@ function start(data) {
   numPlayedNotes = 0;
   numHits = 0;
   numMisses = 0;
+  numAttempts++;
   // todo reset other variables too
 }
 
@@ -250,34 +255,6 @@ function miss() {
   adjustAccuracy();
   if (combo > 10) comboBreak.play();
   combo = 0;
-}
-
-function displayResults() {
-  if (endLoop === 0) {
-    endingCredits.play();
-    applause.play();
-    applause.onended(() => wedidit.play());
-    console.log("misses: " + numMisses);
-    console.log("hits: " + numHits);
-    console.log("accuracy: " + accuracy + "%");
-  }
-  endLoop++;
-  background(0);
-  image(endbg, 0, 0, SCREEN, SCREEN);
-  fill(255);
-  stroke(0);
-  strokeWeight(2);
-  textAlign(CENTER);
-  textSize(56);
-  text("Score: " + nfc(score), HALF, 550 * PX);
-  textSize(48);
-  text("Max Combo: " + nfc(maxCombo), HALF, 600 * PX);
-  if (numPlayedNotes === maxCombo) {
-    textSize(24);
-    text("Full Combo!", HALF, 640 * PX);
-  }
-  // image(btnRetry, HALF - 75 * PX, 700 * PX, 150 * PX, 50 * PX);
-  // btnRetry.position(HALF, 700 * PX);
 }
 
 function keyPressed() {
@@ -417,6 +394,60 @@ const barNote = (radius, notePath) => {
   arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
+function displayResults() {
+  if (endLoop === 0) {
+    cursor();
+    dateTime = new Date();
+    endingCredits.play();
+    applause.play();
+    applause.onended(() => wedidit.play());
+    console.log("misses: " + numMisses);
+    console.log("hits: " + numHits);
+    console.log("accuracy: " + accuracy + "%");
+  }
+  endLoop++;
+  background(0);
+  image(endbg, 0, 0, SCREEN, SCREEN);
+  if (accuracy == 100) {
+    image(rankS, 80 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 93) {
+    image(rankA, 85 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 83) {
+    image(rankB, 95 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 73) {
+    image(rankC, 85 * PX, 145 * PX, 270 * PX, 330 * PX);
+  } else {
+    image(rankD, 85 * PX, 145 * PX, 270 * PX, 330 * PX);
+  }
+  image(hitsIcon, 450 * PX, 200 * PX, 60 * PX, 60 * PX);
+  image(missesIcon, 450 * PX, 280 * PX, 60 * PX, 60 * PX);
+  image(accuracyIcon, 450 * PX, 360 * PX, 60 * PX, 60 * PX);
+  fill(255);
+  fill(241, 241, 241);
+  stroke(0);
+  strokeWeight(3 * PX);
+  //Title
+  textAlign(LEFT);
+  textSize(40 * PX);
+  text(track.title, 70 * PX, 80 * PX);
+  textSize(10 * PX);
+  text(dateTime.toString(), 70 * PX, 100 * PX);
+  textAlign(RIGHT);
+  textSize(56 * PX);
+  text(nfc(numHits), 720 * PX, 247 * PX);
+  text(nfc(numMisses), 720 * PX, 327 * PX);
+  text(accuracy + "%", 720 * PX, 407 * PX);
+  textAlign(CENTER);
+  textSize(80 * PX);
+  text(nfc(score), HALF, 545 * PX);
+  textSize(20 * PX);
+  text("x" + nfc(numAttempts), HALF, 780 * PX);
+  textAlign(RIGHT);
+  textSize(48 * PX);
+  image(maxComboIcon, 200 * PX, 575 * PX, 200 * PX, 80 * PX);
+  text(nfc(maxCombo), 530 * PX, 630 * PX);
+}
+
 function draw() {
   if (notesFinished && songEnded) {
     clear();
@@ -431,7 +462,7 @@ function draw() {
     textSize(SCREEN / 15);
     text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
     textSize(SCREEN / 28);
-    text("%" + nfc(accuracy), SCREEN / 80, SCREEN / 28);
+    text(nfc(accuracy) + "%", SCREEN / 80, SCREEN / 28);
     textAlign(RIGHT);
     textSize(SCREEN / 28);
     text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
@@ -540,11 +571,15 @@ function draw() {
 
     rotate(radians(90 + 45 / 2));
     translate(-HALF, -HALF);
-    noStroke();
-    strokeWeight(0);
+
+    // MOUSE LINE
+    strokeWeight(10 * PX);
+    stroke(35, 116, 171);
+    line(mouseX, mouseY, pmouseX, pmouseY);
 
     // ANCHOR CIRCLE
-    fill(35, 116, 171); // blue
+    noStroke();
+    strokeWeight(0);
     fill(255);
     ellipse(HALF, HALF, NOTE_SIZE);
   }
