@@ -58,7 +58,7 @@ async function extract(contents) {
   const reg2 = new RegExp("ApproachRate:");
   index = text.search(reg2);
   text = text.slice(index);
-  approachRate = text.slice(13, text.indexOf("\n")).trim();
+  approachRate = Number(text.slice(13, text.indexOf("\n")).trim());
 
   // get notes
   text = text.slice(text.indexOf("[HitObjects]"));
