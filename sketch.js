@@ -19,7 +19,7 @@ let songDuration;
 let track = {
   approachRate: 3,
   notes: [],
-  audio: "res/tracks/miiro/audio.mp3",
+  audio: "res/tracks/bigblack/audio.mp3",
 };
 let approachTime;
 let notes = [];

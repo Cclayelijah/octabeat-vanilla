@@ -10,6 +10,23 @@
 //     [-1, 1],
 //   ];
 
+let lastPath = 0;
+let totalPathLength = 0;
+let totalBreakTime = 0;
+let bgImage = "";
+let breaks = [];
+
+function shortestDistance(path1, path2) {
+  // console.log("path1: " + path1);
+  // console.log("path2: " + path2);
+  let length = Math.abs(path1 - path2);
+  if (length > 4) {
+    length = 8 - length;
+  }
+  // console.log("shortestDist: " + length);
+  return length * 45;
+}
+
 function getPath(osuX, osuY) {
   const maxX = 512;
   const maxY = 384;
@@ -60,6 +77,23 @@ async function extract(contents) {
   text = text.slice(index);
   approachRate = Number(text.slice(13, text.indexOf("\n")).trim());
 
+  // get breaks
+  text = text.slice(text.indexOf("[Events]"));
+  text = text.slice(text.indexOf("\n")).trim();
+  const events = text.slice(0, text.indexOf("[TimingPoints]") - 1).trim();
+  const eventData = events.split("\n");
+  eventData.forEach((line) => {
+    const event = line.trim().split(",");
+    if (event[0] == "0") {
+      bgImage = event[2].substring(1, event[2].length - 1);
+      // console.log("bgImage: " + bgImage);
+    }
+    if (event[0] == "2") {
+      totalBreakTime += event[2] - event[1];
+      breaks.push({ startTime: event[1], endTime: event[2] });
+    }
+  });
+
   // get notes
   text = text.slice(text.indexOf("[HitObjects]"));
   text = text.slice(text.indexOf("\n")).trim();
@@ -84,12 +118,20 @@ async function extract(contents) {
     // 2: Finish
     // 3: Clap
     const path = getPath(x, y);
-    // console.log(`path:${path}, time:${time}`);
-    // console.log(`x:${x}, y:${y}, time:${time}`);
+    // calculate difficulty;
+    const distance = shortestDistance(path, lastPath);
+    totalPathLength += 30 + distance;
+    lastPath = path;
     notes.push({ path, time, type, hitSound, played: false });
   });
 
-  return { title, approachRate, notes };
+  const duration = notes[notes.length - 1].time - notes[0].time;
+  const difficulty = (
+    (totalPathLength / (duration - totalBreakTime)) * 9 +
+    approachRate / 6
+  ).toFixed(2);
+
+  return { title, difficulty, approachRate, notes, breaks, bgImage };
 }
 
 const getTrack = async (contents) => {
