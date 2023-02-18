@@ -4,10 +4,14 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="global.js"></script>
-    <script src="getTrack.js"></script>
-    <script src="res/p5.min.js"></script>
+    <!-- <script src="global.js"></script> -->
+    <script type="text/javascript" src="getTrack.js"></script>
+    <script type="text/javascript" src="res/p5.min.js"></script>
     <script src="res/p5.sound.js"></script>
+    <!-- <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.4.8/addons/p5.sound-min.js"
+    ></script> -->
     <script src="sketch.js"></script>
     <title>OctaBeat</title>
     <style>
@@ -17,20 +21,17 @@
         padding: 0;
         overflow: hidden;
       }
-      #upload {
-        color: transparent;
-        /* opacity: 0; */
-      }
     </style>
     <script>
+      window.onload = function () {
+        document.getElementById("load").style.display = "block";
+      };
       const process = (file) => {
         let fr = new FileReader();
         fr.onload = async () => {
           //console.log(fr.result);
           var track = await getTrack(fr.result);
           start(track);
-          let upload = document.getElementById("upload");
-          // upload.style.opacity = "0";
           document.getElementById("load").style.display = "none";
           document.getElementById("game").style.display = "block";
         };
@@ -39,7 +40,7 @@
     </script>
   </head>
   <body style="background-color: #222222; color: #ffffff; text-align: center">
-    <div id="load">
+    <div id="load" hidden>
       <p>upload .osu file</p>
       <form>
         <input
@@ -48,6 +49,7 @@
           title=""
           name="filename"
           onchange="process(this.files[0])"
+          style="margin: auto"
         />
       </form>
     </div>

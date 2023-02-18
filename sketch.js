@@ -1,9 +1,11 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
+const trackName = "mayday";
 let SCREEN;
 let HALF;
 let PX;
 let NOTE_SIZE;
 const DELAY = 35;
+const SHOW_SLICES = false;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
@@ -19,9 +21,12 @@ let songDuration;
 let track = {
   approachRate: 3,
   notes: [],
-  audio: "res/tracks/bigblack/audio.mp3",
+  breaks: [],
+  audio: `res/tracks/${trackName}/audio.mp3`,
 };
 let approachTime;
+let currBreak = false;
+let breaks = [];
 let notes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
@@ -47,7 +52,8 @@ let song,
   wedidit,
   comboBreak;
 // image files
-let endbg,
+let trackBg,
+  endbg,
   hitsIcon,
   missesIcon,
   accuracyIcon,
@@ -74,7 +80,9 @@ let endbg,
   textDot,
   sectionFail,
   sectionPass,
-  rightArrow;
+  rightArrow,
+  star,
+  warningSign;
 
 function preload() {
   soundFormats("mp3", "ogg", "wav");
@@ -95,9 +103,6 @@ function preload() {
   missesIcon = loadImage("res/images/misses.png");
   accuracyIcon = loadImage("res/images/accuracy.png");
   maxComboIcon = loadImage("res/images/ranking-maxcombo.png");
-  btnBack = createImage("res/images/pause-back.png");
-  btnContinue = createImage("res/images/pause-continue.png");
-  btnRetry = createImage("res/images/pause-retry.png");
   rankS = loadImage("res/images/ranking-S.png");
   rankA = loadImage("res/images/ranking-A.png");
   rankB = loadImage("res/images/ranking-B.png");
@@ -118,6 +123,8 @@ function preload() {
   sectionFail = loadImage("res/images/section-fail.png");
   sectionPass = loadImage("res/images/section-pass.png");
   rightArrow = loadImage("res/images/right-arrow.png");
+  star = loadImage("res/images/star.png");
+  warningSign = loadImage("res/images/warning-sign.png");
 }
 
 function setup() {
@@ -142,6 +149,10 @@ function setup() {
   noCursor();
   textFont(myFont);
   textSize(24);
+
+  btnBack = createImage("res/images/pause-back.png");
+  btnContinue = createImage("res/images/pause-continue.png");
+  btnRetry = createImage("res/images/pause-retry.png");
 
   anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
@@ -183,6 +194,9 @@ function start(data) {
   console.log("start");
   track = data;
   console.log(track);
+  if (track.bgImage)
+    trackBg = loadImage(`res/tracks/${trackName}/` + track.bgImage);
+  if (track.breaks) breaks = track.breaks;
   notes = track.notes;
   const AR = track.approachRate;
   song.setVolume(0.5);
@@ -326,12 +340,13 @@ const slices = () => {
   for (let i = 0; i < 8; i++) {
     if (i === activeSlice()) {
       fill(190, 183, 223);
+      if (currBreak) fill(0);
       strokeWeight(0);
       arc(
         0,
         0,
-        edgeLength - NOTE_SIZE - 3,
-        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3 * PX,
+        edgeLength - NOTE_SIZE - 3 * PX,
         lastAngle,
         lastAngle + radians(45)
       );
@@ -341,8 +356,8 @@ const slices = () => {
       arc(
         0,
         0,
-        edgeLength - NOTE_SIZE - 3,
-        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3 * PX,
+        edgeLength - NOTE_SIZE - 3 * PX,
         lastAngle,
         lastAngle + radians(45)
       );
@@ -365,7 +380,7 @@ const landingRegion = () => {
         lastAngle + radians(45)
       );
     } else {
-      fill(190, 183, 223); // purple
+      fill(190, 183, 223); // white-purple
       arc(
         0,
         0,
@@ -394,6 +409,50 @@ const barNote = (radius, notePath) => {
   arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
+const drawStars = () => {
+  const numStars = Math.floor(track.difficulty);
+  //stars
+  for (i = 0; i < numStars; i++) {
+    image(star, 60 * PX + i * 30 * PX, 15 * PX, 30 * PX, 30 * PX);
+  }
+  image(
+    star,
+    60 * PX + numStars * 30 * PX,
+    15 * PX,
+    (track.difficulty - numStars) * 30 * PX,
+    30 * PX,
+    0,
+    0,
+    40 * PX,
+    40 * PX,
+    COVER,
+    LEFT
+  );
+  textSize(20 * PX);
+  textAlign(LEFT);
+  text(track.difficulty, 90 * PX + numStars * 30 * PX, 35 * PX);
+};
+
+const flashGetReady = (endTime) => {
+  const time = endTime - approachTime;
+  if (playTime > time - 500) {
+    // do nothing
+  } else if (playTime > time - 1000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  } else if (playTime > time - 1500) {
+    // do nothing
+  } else if (playTime > time - 2000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  } else if (playTime > time - 2500) {
+    // do nothing
+  } else if (playTime > time - 3000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  }
+};
+
 function displayResults() {
   if (endLoop === 0) {
     cursor();
@@ -401,9 +460,7 @@ function displayResults() {
     endingCredits.play();
     applause.play();
     applause.onended(() => wedidit.play());
-    console.log("misses: " + numMisses);
-    console.log("hits: " + numHits);
-    console.log("accuracy: " + accuracy + "%");
+    drawingContext.shadowBlur = 0;
   }
   endLoop++;
   background(0);
@@ -429,9 +486,9 @@ function displayResults() {
   strokeWeight(3 * PX);
   textAlign(LEFT);
   textSize(40 * PX);
-  text(track.title, 70 * PX, 80 * PX);
-  textSize(10 * PX);
-  text(dateTime.toString(), 70 * PX, 100 * PX);
+  text(track.title, 60 * PX, 85 * PX);
+  textSize(12 * PX);
+  text(dateTime.toString(), 60 * PX, 110 * PX);
   textAlign(RIGHT);
   textSize(56 * PX);
   text(nfc(numHits), 720 * PX, 247 * PX);
@@ -450,6 +507,7 @@ function displayResults() {
   const seconds = Math.floor((songDuration / 1000) % 60);
   const minutes = Math.floor(songDuration / 1000 / 60);
   text(minutes + ":" + seconds, 60 * PX, 780 * PX);
+  drawStars();
 }
 
 function draw() {
@@ -458,8 +516,10 @@ function draw() {
     displayResults();
   } else {
     background(0);
+    if (bgImage) image(bgImage, 0, 0, SCREEN, SCREEN);
     // text
     let fps = frameRate();
+    drawingContext.shadowBlur = 0;
     fill(255);
     stroke(0);
     textAlign(LEFT);
@@ -480,27 +540,45 @@ function draw() {
     playTime = new Date() - startTime - timePaused - DELAY;
     // progress bar
     stroke(255, 0, 0);
-    strokeWeight(12);
+    strokeWeight(8 * PX);
     x = map(playTime, 0, songDuration, 0, SCREEN);
     line(0, 0, x, 0);
+
+    // PIE GLOW
+    fill(255);
+    strokeWeight(0);
+    drawingContext.shadowColor = "white";
+    drawingContext.shadowBlur = 50 * PX;
+    ellipse(HALF, HALF, edgeLength + NOTE_SIZE);
+    drawingContext.shadowBlur = 0;
 
     translate(HALF, HALF);
     rotate(radians(-90 - 45 / 2));
 
     // HIT ZONE
     noFill();
-    strokeWeight(4);
+    strokeWeight(0);
     stroke(255);
     landingRegion();
 
     // pie slices
     strokeWeight(0);
+    drawingContext.shadowBlur = 2 * PX;
+    if (SHOW_SLICES) {
+      drawingContext.shadowColor = "rgb(190, 183, 223)";
+    } else {
+      drawingContext.shadowColor = "rgb(0, 0, 0)";
+    }
     slices();
+    drawingContext.shadowBlur = 0;
 
     // NOTES
     noFill();
+    drawingContext.shadowBlur = 50 * PX;
+    drawingContext.shadowColor = "red";
     strokeWeight(NOTE_SIZE * 2);
-    stroke(255, 0, 0);
+    stroke(255, 255, 255);
+    // stroke(255, 0, 0);
     try {
       if (
         notes.length === 0 &&
@@ -522,9 +600,28 @@ function draw() {
           notesToPlay.shift();
         }
       }
+      // breaks
+      if (breaks.length > 0) {
+        const nextBreak = breaks[0];
+        if (playTime > nextBreak.startTime) {
+          currBreak = true; // todo turn off active slice
+          const halftime =
+            nextBreak.startTime + nextBreak.endTime - nextBreak.startTime;
+          if (playTime > halftime && playTime < halftime + 2000) {
+            // todo add health mechanics
+            // todo play section pass/fail sound
+            // todo show section pass/fail icon
+          }
+          flashGetReady(nextBreak.endTime);
+          if (playTime > nextBreak.endTime - approachTime) {
+            breaks.shift();
+            currBreak = false;
+          }
+        }
+      }
       // notes
       if (notes.length > 0) {
-        let nextNote = notes[0];
+        const nextNote = notes[0];
         if (playTime > nextNote.time - approachTime) {
           numPlayedNotes++;
           activeNotes.push(nextNote);
@@ -575,6 +672,8 @@ function draw() {
 
     rotate(radians(90 + 45 / 2));
     translate(-HALF, -HALF);
+    drawingContext.shadowColor = "white";
+    drawingContext.shadowBlur = 30 * PX;
 
     // MOUSE LINE
     strokeWeight(10 * PX);
