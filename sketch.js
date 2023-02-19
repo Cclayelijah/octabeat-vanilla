@@ -1,11 +1,8 @@
-// p5.disableFriendlyErrors = true; // disables FES to boost performance
-const trackName = "mayday";
+p5.disableFriendlyErrors = true; // disables FES to boost performance
 let SCREEN;
 let HALF;
 let PX;
 let NOTE_SIZE;
-const DELAY = 0;
-const SHOW_SLICES = false;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
@@ -22,7 +19,7 @@ let track = {
   approachRate: 3,
   notes: [],
   breaks: [],
-  audio: `res/tracks/${trackName}/audio.mp3`,
+  audio: `res/tracks/${TRACK_NAME}/audio.mp3`,
 };
 let approachTime;
 let currBreak = false;
@@ -196,7 +193,7 @@ function start(data) {
   track = data;
   console.log(track);
   if (track.bgImage)
-    trackBg = loadImage(`res/tracks/${trackName}/` + track.bgImage);
+    trackBg = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
   if (track.breaks) breaksLeft = track.breaks;
   notes = track.notes;
   const AR = track.approachRate;
@@ -340,7 +337,8 @@ const slices = () => {
   let lastAngle = 0;
   for (let i = 0; i < 8; i++) {
     if (i === activeSlice()) {
-      fill(190, 183, 223);
+      // fill(190, 183, 223);
+      fill(SLICE_COLOR);
       if (currBreak) fill(0);
       strokeWeight(0);
       arc(
@@ -504,7 +502,7 @@ function displayResults() {
   );
   textSize(20 * PX);
   textAlign(LEFT);
-  text(track.difficulty, 90 * PX + numStars * 30 * PX, 35 * PX);
+  text(track.difficulty, 95 * PX + numStars * 30 * PX, 37 * PX);
 }
 
 function draw() {
@@ -566,10 +564,10 @@ function draw() {
     drawingContext.shadowBlur = 0;
     // NOTES
     noFill();
-    drawingContext.shadowBlur = 50 * PX;
-    drawingContext.shadowColor = "red";
     strokeWeight(NOTE_SIZE * 2);
-    stroke(255, 255, 255);
+    stroke(NOTE_COLOR);
+    drawingContext.shadowBlur = 50 * PX;
+    drawingContext.shadowColor = NOTE_GLOW;
     // stroke(255, 0, 0);
     try {
       if (
@@ -662,8 +660,8 @@ function draw() {
     drawingContext.shadowColor = "white";
     drawingContext.shadowBlur = 30 * PX;
     // MOUSE LINE
-    strokeWeight(10 * PX);
-    stroke(35, 116, 171);
+    strokeWeight(CURSOR_SIZE * PX);
+    stroke(CURSOR_COLOR);
     line(mouseX, mouseY, pmouseX, pmouseY);
     // ANCHOR CIRCLE
     noStroke();

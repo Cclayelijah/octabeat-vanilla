@@ -24,7 +24,7 @@ function shortestDistance(path1, path2) {
     length = 8 - length;
   }
   // console.log("shortestDist: " + length);
-  return length * 45;
+  return length;
 }
 
 function getPath(osuX, osuY) {
@@ -120,15 +120,17 @@ async function extract(contents) {
     const path = getPath(x, y);
     // calculate difficulty;
     const distance = shortestDistance(path, lastPath);
-    totalPathLength += 30 + distance;
+    totalPathLength += distance == 0 ? 500 : 1000;
     lastPath = path;
     notes.push({ path, time, type, hitSound, played: false });
   });
 
   const duration = notes[notes.length - 1].time - notes[0].time;
+  const boost = approachRate > 9 ? approachRate - 9 : 0;
   const difficulty = (
-    (totalPathLength / (duration - totalBreakTime)) * 9 +
-    approachRate / 6
+    totalPathLength / (duration - totalBreakTime) +
+    approachRate / 6 +
+    boost
   ).toFixed(2);
 
   return { title, difficulty, approachRate, notes, breaks, bgImage };
