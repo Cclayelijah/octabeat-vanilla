@@ -1,10 +1,10 @@
-p5.disableFriendlyErrors = true; // disables FES to boost performance
+// p5.disableFriendlyErrors = true; // disables FES to boost performance
 const trackName = "mayday";
 let SCREEN;
 let HALF;
 let PX;
 let NOTE_SIZE;
-const DELAY = 35;
+const DELAY = 0;
 const SHOW_SLICES = false;
 let score = 0;
 let combo = 0;
@@ -26,7 +26,7 @@ let track = {
 };
 let approachTime;
 let currBreak = false;
-let breaks = [];
+let breaksLeft = [];
 let notes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
@@ -98,7 +98,7 @@ function preload() {
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
 
   // images
-  endbg = loadImage("res/images/endbg1.jpg");
+  endbg = loadImage("res/images/endbg.jpg");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
   accuracyIcon = loadImage("res/images/accuracy.png");
@@ -192,11 +192,12 @@ function windowResized() {
 
 function start(data) {
   console.log("start");
+  getAudioContext().resume();
   track = data;
   console.log(track);
   if (track.bgImage)
     trackBg = loadImage(`res/tracks/${trackName}/` + track.bgImage);
-  if (track.breaks) breaks = track.breaks;
+  if (track.breaks) breaksLeft = track.breaks;
   notes = track.notes;
   const AR = track.approachRate;
   song.setVolume(0.5);
@@ -409,30 +410,6 @@ const barNote = (radius, notePath) => {
   arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
-const drawStars = () => {
-  const numStars = Math.floor(track.difficulty);
-  //stars
-  for (i = 0; i < numStars; i++) {
-    image(star, 60 * PX + i * 30 * PX, 15 * PX, 30 * PX, 30 * PX);
-  }
-  image(
-    star,
-    60 * PX + numStars * 30 * PX,
-    15 * PX,
-    (track.difficulty - numStars) * 30 * PX,
-    30 * PX,
-    0,
-    0,
-    40 * PX,
-    40 * PX,
-    COVER,
-    LEFT
-  );
-  textSize(20 * PX);
-  textAlign(LEFT);
-  text(track.difficulty, 90 * PX + numStars * 30 * PX, 35 * PX);
-};
-
 const flashGetReady = (endTime) => {
   const time = endTime - approachTime;
   if (playTime > time - 500) {
@@ -507,21 +484,42 @@ function displayResults() {
   const seconds = Math.floor((songDuration / 1000) % 60);
   const minutes = Math.floor(songDuration / 1000 / 60);
   text(minutes + ":" + seconds, 60 * PX, 780 * PX);
-  drawStars();
+  const numStars = Math.floor(track.difficulty);
+  //stars
+  for (i = 0; i < numStars; i++) {
+    image(star, 60 * PX + i * 30 * PX, 15 * PX, 30 * PX, 30 * PX);
+  }
+  image(
+    star,
+    60 * PX + numStars * 30 * PX,
+    15 * PX,
+    (track.difficulty - numStars) * 30 * PX,
+    30 * PX,
+    0,
+    0,
+    40 * PX,
+    40 * PX,
+    COVER,
+    LEFT
+  );
+  textSize(20 * PX);
+  textAlign(LEFT);
+  text(track.difficulty, 90 * PX + numStars * 30 * PX, 35 * PX);
 }
 
 function draw() {
   if (notesFinished && songEnded) {
     clear();
-    displayResults();
+    displayResults(p5);
   } else {
     background(0);
-    if (bgImage) image(bgImage, 0, 0, SCREEN, SCREEN);
+    if (trackBg) image(trackBg, 0, 0, SCREEN, SCREEN);
     // text
     let fps = frameRate();
     drawingContext.shadowBlur = 0;
     fill(255);
     stroke(0);
+    strokeWeight(3 * PX);
     textAlign(LEFT);
     textSize(SCREEN / 15);
     text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
@@ -532,7 +530,6 @@ function draw() {
     text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
     textSize(SCREEN / 66);
     text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
-
     let timePaused = pauseTime;
     if (paused) {
       timePaused += new Date() - pauseStartTime;
@@ -543,7 +540,6 @@ function draw() {
     strokeWeight(8 * PX);
     x = map(playTime, 0, songDuration, 0, SCREEN);
     line(0, 0, x, 0);
-
     // PIE GLOW
     fill(255);
     strokeWeight(0);
@@ -551,16 +547,13 @@ function draw() {
     drawingContext.shadowBlur = 50 * PX;
     ellipse(HALF, HALF, edgeLength + NOTE_SIZE);
     drawingContext.shadowBlur = 0;
-
     translate(HALF, HALF);
     rotate(radians(-90 - 45 / 2));
-
     // HIT ZONE
     noFill();
     strokeWeight(0);
     stroke(255);
     landingRegion();
-
     // pie slices
     strokeWeight(0);
     drawingContext.shadowBlur = 2 * PX;
@@ -571,7 +564,6 @@ function draw() {
     }
     slices();
     drawingContext.shadowBlur = 0;
-
     // NOTES
     noFill();
     drawingContext.shadowBlur = 50 * PX;
@@ -601,8 +593,8 @@ function draw() {
         }
       }
       // breaks
-      if (breaks.length > 0) {
-        const nextBreak = breaks[0];
+      if (breaksLeft.length > 0) {
+        const nextBreak = breaksLeft[0];
         if (playTime > nextBreak.startTime) {
           currBreak = true; // todo turn off active slice
           const halftime =
@@ -614,7 +606,7 @@ function draw() {
           }
           flashGetReady(nextBreak.endTime);
           if (playTime > nextBreak.endTime - approachTime) {
-            breaks.shift();
+            breaksLeft.shift();
             currBreak = false;
           }
         }
@@ -633,9 +625,6 @@ function draw() {
         activeNotes.forEach((note, i) => {
           const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
           const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
-          // note.xPos = distance * note.xPath + HALF;
-          // note.yPos = distance * note.yPath + HALF;
-          // ellipse(note.xPos, note.yPos, NOTE_SIZE);
           barNote(radius, note.path);
           //collision check
           if (
@@ -655,7 +644,6 @@ function draw() {
             activeNotes.splice(i, 1);
           }
           if (note.played) return;
-
           //exit check
           if (radius > edgeLength + NOTE_SIZE * 4) {
             activeNotes.shift();
@@ -669,17 +657,14 @@ function draw() {
       console.log(e);
       pause();
     }
-
     rotate(radians(90 + 45 / 2));
     translate(-HALF, -HALF);
     drawingContext.shadowColor = "white";
     drawingContext.shadowBlur = 30 * PX;
-
     // MOUSE LINE
     strokeWeight(10 * PX);
     stroke(35, 116, 171);
     line(mouseX, mouseY, pmouseX, pmouseY);
-
     // ANCHOR CIRCLE
     noStroke();
     strokeWeight(0);
