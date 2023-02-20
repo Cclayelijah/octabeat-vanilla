@@ -6,14 +6,11 @@ let NOTE_SIZE;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
-let startTime;
 let notesFinished = false;
 let songEnded = false;
 let endLoop = 0;
 let paused = true;
-let pauseTime = 0;
-let pauseStartTime;
-let playTime; // currTime - startTime - pauseTime - DELAY;
+let currTime; // song.currentTime() - DELAY
 let songDuration;
 let track = {
   approachRate: 3,
@@ -202,10 +199,8 @@ function start(data) {
   song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
-    songEnded = true;
+    if (!paused) songEnded = true;
   });
-  startTime = new Date();
-  pauseTime = 0;
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   paused = false;
   numPlayedNotes = 0;
@@ -217,14 +212,12 @@ function start(data) {
 
 function play() {
   song.play();
-  pauseTime += pauseStartTime ? new Date() - pauseStartTime : 0; // total time paused
   paused = false;
   console.log("play");
 }
 
 function pause() {
   song.pause();
-  pauseStartTime = new Date();
   paused = true;
   console.log("pause");
 }
@@ -410,19 +403,19 @@ const barNote = (radius, notePath) => {
 
 const flashGetReady = (endTime) => {
   const time = endTime - approachTime;
-  if (playTime > time - 500) {
+  if (currTime > time - 500) {
     // do nothing
-  } else if (playTime > time - 1000) {
+  } else if (currTime > time - 1000) {
     // show warning
     image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
-  } else if (playTime > time - 1500) {
+  } else if (currTime > time - 1500) {
     // do nothing
-  } else if (playTime > time - 2000) {
+  } else if (currTime > time - 2000) {
     // show warning
     image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
-  } else if (playTime > time - 2500) {
+  } else if (currTime > time - 2500) {
     // do nothing
-  } else if (playTime > time - 3000) {
+  } else if (currTime > time - 3000) {
     // show warning
     image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
   }
@@ -510,6 +503,7 @@ function draw() {
     clear();
     displayResults(p5);
   } else {
+    currTime = Math.floor(song.currentTime() * 1000) - DELAY;
     background(0);
     if (trackBg) image(trackBg, 0, 0, SCREEN, SCREEN);
     // text
@@ -528,15 +522,10 @@ function draw() {
     text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
     textSize(SCREEN / 66);
     text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
-    let timePaused = pauseTime;
-    if (paused) {
-      timePaused += new Date() - pauseStartTime;
-    }
-    playTime = new Date() - startTime - timePaused - DELAY;
     // progress bar
     stroke(255, 0, 0);
     strokeWeight(8 * PX);
-    x = map(playTime, 0, songDuration, 0, SCREEN);
+    x = map(currTime, 0, songDuration, 0, SCREEN);
     line(0, 0, x, 0);
     // PIE GLOW
     fill(255);
@@ -581,7 +570,7 @@ function draw() {
       // notesToPlay
       if (notesToPlay.length > 0) {
         let note = notesToPlay[0];
-        if (note.time < playTime) {
+        if (note.time < currTime) {
           playSound(note.sound);
           landed[note.path] = true; // turn green
           setTimeout(() => {
@@ -593,17 +582,17 @@ function draw() {
       // breaks
       if (breaksLeft.length > 0) {
         const nextBreak = breaksLeft[0];
-        if (playTime > nextBreak.startTime) {
+        if (currTime > nextBreak.startTime) {
           currBreak = true; // todo turn off active slice
           const halftime =
             nextBreak.startTime + nextBreak.endTime - nextBreak.startTime;
-          if (playTime > halftime && playTime < halftime + 2000) {
+          if (currTime > halftime && currTime < halftime + 2000) {
             // todo add health mechanics
             // todo play section pass/fail sound
             // todo show section pass/fail icon
           }
           flashGetReady(nextBreak.endTime);
-          if (playTime > nextBreak.endTime - approachTime) {
+          if (currTime > nextBreak.endTime - approachTime) {
             breaksLeft.shift();
             currBreak = false;
           }
@@ -612,7 +601,7 @@ function draw() {
       // notes
       if (notes.length > 0) {
         const nextNote = notes[0];
-        if (playTime > nextNote.time - approachTime) {
+        if (currTime > nextNote.time - approachTime) {
           numPlayedNotes++;
           activeNotes.push(nextNote);
           notes.shift();
@@ -621,7 +610,7 @@ function draw() {
       // activeNotes
       if (activeNotes.length > 0) {
         activeNotes.forEach((note, i) => {
-          const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
+          const life = (note.time - currTime) / approachTime; // (.52) percent of life the note has left;
           const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
           barNote(radius, note.path);
           //collision check
