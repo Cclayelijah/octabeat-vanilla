@@ -202,7 +202,7 @@ function start(data) {
   song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
-    songEnded = true;
+    if (!paused) songEnded = true;
   });
   startTime = new Date();
   pauseTime = 0;
