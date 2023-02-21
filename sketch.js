@@ -1,4 +1,6 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
+let WIDTH;
+let HEIGHT;
 let SCREEN;
 let HALF;
 let PX;
@@ -11,6 +13,12 @@ let notesFinished = false;
 let songEnded = false;
 let endLoop = 0;
 let paused = false;
+let currBreak = false;
+let numPlayedNotes = 0;
+let accuracy = 0; // numHits / numHits + numMisses * 2
+let numHits = 0;
+let numMisses = 0;
+let numAttempts = 1;
 let currTime; // song.currentTime() - DELAY
 let songDuration;
 let track = {
@@ -20,20 +28,15 @@ let track = {
   audio: `res/tracks/${TRACK_NAME}/audio.mp3`,
 };
 let approachTime;
-let currBreak = false;
 let breaksLeft = [];
 let notes = [];
+let trackNotes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
-let numPlayedNotes;
 let edgeLength;
 let cornerLength;
 let anchorPoints = [];
 let landed;
-let accuracy = 0; // numHits / numHits + numMisses * 2
-let numHits = 0;
-let numMisses = 0;
-let numAttempts = 0;
 let dateTime;
 
 // sound files
@@ -98,6 +101,9 @@ function preload() {
   missesIcon = loadImage("res/images/misses.png");
   accuracyIcon = loadImage("res/images/accuracy.png");
   maxComboIcon = loadImage("res/images/ranking-maxcombo.png");
+  btnBack = createImage("res/images/pause-back.png");
+  btnContinue = createImage("res/images/pause-continue.png");
+  btnRetry = createImg("res/images/pause-retry.png");
   rankS = loadImage("res/images/ranking-S.png");
   rankA = loadImage("res/images/ranking-A.png");
   rankB = loadImage("res/images/ranking-B.png");
@@ -123,9 +129,9 @@ function preload() {
 }
 
 function setup() {
-  const width = windowWidth;
-  const height = windowHeight;
-  SCREEN = width >= height ? height : width;
+  WIDTH = windowWidth;
+  HEIGHT = windowHeight;
+  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
   HALF = SCREEN / 2;
   PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
@@ -145,10 +151,6 @@ function setup() {
   textFont(myFont);
   textSize(24);
 
-  btnBack = createImage("res/images/pause-back.png");
-  btnContinue = createImage("res/images/pause-continue.png");
-  btnRetry = createImage("res/images/pause-retry.png");
-
   anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
     { x: HALF + cornerLength, y: HALF - cornerLength, active: false },
@@ -159,12 +161,16 @@ function setup() {
     { x: HALF - edgeLength, y: HALF, active: false },
     { x: HALF - cornerLength, y: HALF - cornerLength, active: false },
   ];
+
+  btnRetry.size(200 * PX, 65 * PX);
+  btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
+  btnRetry.hide();
 }
 
 function windowResized() {
-  const width = windowWidth;
-  const height = windowHeight;
-  SCREEN = width >= height ? height : width;
+  WIDTH = windowWidth;
+  HEIGHT = windowHeight;
+  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
   HALF = SCREEN / 2;
   PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
@@ -183,6 +189,9 @@ function windowResized() {
     { x: HALF - edgeLength, y: HALF, active: false },
     { x: HALF - cornerLength, y: HALF - cornerLength, active: false },
   ];
+
+  btnRetry.size(200 * PX, 65 * PX);
+  btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
 }
 
 function start(data) {
@@ -194,6 +203,7 @@ function start(data) {
     trackBg = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
   if (track.breaks) breaksLeft = track.breaks;
   notes = track.notes;
+  trackNotes = notes;
   const AR = track.approachRate;
   song.setVolume(0.5);
   song.stop();
@@ -203,12 +213,6 @@ function start(data) {
     if (!paused) songEnded = true;
   });
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
-  paused = false;
-  numPlayedNotes = 0;
-  numHits = 0;
-  numMisses = 0;
-  numAttempts++;
-  // todo reset other variables too
 }
 
 function play() {
@@ -261,6 +265,32 @@ function miss() {
   adjustAccuracy();
   if (combo > 10) comboBreak.play();
   combo = 0;
+}
+
+function displayResults() {
+  if (endLoop === 0) {
+    endingCredits.play();
+    applause.play();
+    applause.onended(() => wedidit.play());
+    console.log("misses: " + numMisses);
+    console.log("hits: " + numHits);
+    console.log("accuracy: " + accuracy + "%");
+  }
+  endLoop++;
+  background(0);
+  image(endbg, 0, 0, SCREEN, SCREEN);
+  fill(255);
+  stroke(0);
+  strokeWeight(2);
+  textAlign(CENTER);
+  textSize(56);
+  text("Score: " + nfc(score), HALF, 550 * PX);
+  textSize(48);
+  text("Max Combo: " + nfc(maxCombo), HALF, 600 * PX);
+  if (numPlayedNotes === maxCombo) {
+    textSize(24);
+    text("Full Combo!", HALF, 640 * PX);
+  }
 }
 
 function keyPressed() {
@@ -427,6 +457,27 @@ const flashGetReady = (endTime) => {
   }
 };
 
+function retry() {
+  btnRetry.hide();
+  numAttempts++;
+  notes = trackNotes;
+  score = 0;
+  combo = 0;
+  maxCombo = 0;
+  notesFinished = false;
+  songEnded = false;
+  endLoop = 0;
+  paused = false;
+  currBreak = false;
+  numPlayedNotes = 0;
+  accuracy = 0; // numHits / numHits + numMisses * 2
+  numHits = 0;
+  numMisses = 0;
+  song.stop();
+  song.play();
+  if (track.breaks) breaksLeft = track.breaks;
+}
+
 function displayResults() {
   if (endLoop === 0) {
     cursor();
@@ -435,6 +486,8 @@ function displayResults() {
     applause.play();
     applause.onended(() => wedidit.play());
     drawingContext.shadowBlur = 0;
+    btnRetry.mousePressed(retry);
+    btnRetry.show();
   }
   endLoop++;
   background(0);
