@@ -3,6 +3,7 @@ let SCREEN;
 let HALF;
 let PX;
 let NOTE_SIZE;
+let fs = false;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
@@ -286,6 +287,11 @@ function keyPressed() {
       song.stop();
     } else paused ? play() : pause();
   }
+}
+
+function doubleClicked() {
+  fs = !fs;
+  fullscreen(fs);
 }
 
 const activeSlice = () => {
