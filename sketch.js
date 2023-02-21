@@ -1,6 +1,6 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
-let WIDTH
-let HEIGHT
+let WIDTH;
+let HEIGHT;
 let SCREEN;
 let HALF;
 let PX;
@@ -12,7 +12,13 @@ let maxCombo = 0;
 let notesFinished = false;
 let songEnded = false;
 let endLoop = 0;
-let paused = true;
+let paused = false;
+let currBreak = false;
+let numPlayedNotes = 0;
+let accuracy = 0; // numHits / numHits + numMisses * 2
+let numHits = 0;
+let numMisses = 0;
+let numAttempts = 1;
 let currTime; // song.currentTime() - DELAY
 let songDuration;
 let track = {
@@ -22,20 +28,15 @@ let track = {
   audio: `res/tracks/${TRACK_NAME}/audio.mp3`,
 };
 let approachTime;
-let currBreak = false;
 let breaksLeft = [];
 let notes = [];
+let trackNotes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
-let numPlayedNotes;
 let edgeLength;
 let cornerLength;
 let anchorPoints = [];
 let landed;
-let accuracy = 0; // numHits / numHits + numMisses * 2
-let numHits = 0;
-let numMisses = 0;
-let numAttempts = 0;
 let dateTime;
 
 // sound files
@@ -150,10 +151,6 @@ function setup() {
   textFont(myFont);
   textSize(24);
 
-  btnBack = createImage("res/images/pause-back.png");
-  btnContinue = createImage("res/images/pause-continue.png");
-  btnRetry = createImage("res/images/pause-retry.png");
-
   anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
     { x: HALF + cornerLength, y: HALF - cornerLength, active: false },
@@ -167,7 +164,7 @@ function setup() {
 
   btnRetry.size(200 * PX, 65 * PX);
   btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
-  btnRetry.hide()
+  btnRetry.hide();
 }
 
 function windowResized() {
@@ -206,6 +203,7 @@ function start(data) {
     trackBg = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
   if (track.breaks) breaksLeft = track.breaks;
   notes = track.notes;
+  trackNotes = notes;
   const AR = track.approachRate;
   song.setVolume(0.5);
   song.stop();
@@ -215,12 +213,6 @@ function start(data) {
     if (!paused) songEnded = true;
   });
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
-  paused = false;
-  numPlayedNotes = 0;
-  numHits = 0;
-  numMisses = 0;
-  numAttempts++;
-  // todo reset other variables too
 }
 
 function play() {
@@ -299,8 +291,6 @@ function displayResults() {
     textSize(24);
     text("Full Combo!", HALF, 640 * PX);
   }
-  // image(btnRetry, HALF - 75 * PX, 700 * PX, 150 * PX, 50 * PX);
-  // btnRetry.position(HALF, 700 * PX);
 }
 
 function keyPressed() {
@@ -467,6 +457,27 @@ const flashGetReady = (endTime) => {
   }
 };
 
+function retry() {
+  btnRetry.hide();
+  numAttempts++;
+  notes = trackNotes;
+  score = 0;
+  combo = 0;
+  maxCombo = 0;
+  notesFinished = false;
+  songEnded = false;
+  endLoop = 0;
+  paused = false;
+  currBreak = false;
+  numPlayedNotes = 0;
+  accuracy = 0; // numHits / numHits + numMisses * 2
+  numHits = 0;
+  numMisses = 0;
+  song.stop()
+  song.play()
+  if (track.breaks) breaksLeft = track.breaks;
+}
+
 function displayResults() {
   if (endLoop === 0) {
     cursor();
@@ -475,6 +486,8 @@ function displayResults() {
     applause.play();
     applause.onended(() => wedidit.play());
     drawingContext.shadowBlur = 0;
+    btnRetry.mousePressed(retry);
+    btnRetry.show();
   }
   endLoop++;
   background(0);
