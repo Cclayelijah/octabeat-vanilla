@@ -5,25 +5,24 @@ let SCREEN;
 let HALF;
 let PX;
 let NOTE_SIZE;
-const DELAY = 35;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
-let startTime;
 let notesFinished = false;
 let songEnded = false;
 let endLoop = 0;
 let paused = true;
-let pauseTime = 0;
-let pauseStartTime;
-let playTime; // currTime - startTime - pauseTime - DELAY;
+let currTime; // song.currentTime() - DELAY
 let songDuration;
 let track = {
   approachRate: 3,
   notes: [],
-  audio: "res/tracks/miiro/audio.mp3",
+  breaks: [],
+  audio: `res/tracks/${TRACK_NAME}/audio.mp3`,
 };
 let approachTime;
+let currBreak = false;
+let breaksLeft = [];
 let notes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
@@ -33,9 +32,10 @@ let cornerLength;
 let anchorPoints = [];
 let landed;
 let accuracy = 0; // numHits / numHits + numMisses * 2
-let numHits;
-let numMisses;
-// misses hold twice as much weight as hits.
+let numHits = 0;
+let numMisses = 0;
+let numAttempts = 0;
+let dateTime;
 
 // sound files
 let song,
@@ -48,10 +48,12 @@ let song,
   wedidit,
   comboBreak;
 // image files
-let endbg,
-  comboIcon,
+let trackBg,
+  endbg,
   hitsIcon,
   missesIcon,
+  accuracyIcon,
+  maxComboIcon,
   btnBack,
   btnContinue,
   btnRetry,
@@ -74,7 +76,9 @@ let endbg,
   textDot,
   sectionFail,
   sectionPass,
-  rightArrow;
+  rightArrow,
+  star,
+  warningSign;
 
 function preload() {
   soundFormats("mp3", "ogg", "wav");
@@ -91,9 +95,10 @@ function preload() {
 
   // images
   endbg = loadImage("res/images/endbg.jpg");
-  comboIcon = loadImage("res/images/combo.png");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
+  accuracyIcon = loadImage("res/images/accuracy.png");
+  maxComboIcon = loadImage("res/images/ranking-maxcombo.png");
   btnBack = createImage("res/images/pause-back.png");
   btnContinue = createImage("res/images/pause-continue.png");
   btnRetry = createImg("res/images/pause-retry.png");
@@ -117,6 +122,8 @@ function preload() {
   sectionFail = loadImage("res/images/section-fail.png");
   sectionPass = loadImage("res/images/section-pass.png");
   rightArrow = loadImage("res/images/right-arrow.png");
+  star = loadImage("res/images/star.png");
+  warningSign = loadImage("res/images/warning-sign.png");
 }
 
 function setup() {
@@ -138,8 +145,13 @@ function setup() {
   hitClap.setVolume(0.5);
 
   createCanvas(SCREEN, SCREEN);
+  noCursor();
   textFont(myFont);
   textSize(24);
+
+  btnBack = createImage("res/images/pause-back.png");
+  btnContinue = createImage("res/images/pause-continue.png");
+  btnRetry = createImage("res/images/pause-retry.png");
 
   anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
@@ -186,8 +198,12 @@ function windowResized() {
 
 function start(data) {
   console.log("start");
+  getAudioContext().resume();
   track = data;
   console.log(track);
+  if (track.bgImage)
+    trackBg = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
+  if (track.breaks) breaksLeft = track.breaks;
   notes = track.notes;
   const AR = track.approachRate;
   song.setVolume(0.5);
@@ -195,28 +211,25 @@ function start(data) {
   song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
-    songEnded = true;
+    if (!paused) songEnded = true;
   });
-  startTime = new Date();
-  pauseTime = 0;
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   paused = false;
   numPlayedNotes = 0;
   numHits = 0;
   numMisses = 0;
+  numAttempts++;
   // todo reset other variables too
 }
 
 function play() {
   song.play();
-  pauseTime += pauseStartTime ? new Date() - pauseStartTime : 0; // total time paused
   paused = false;
   console.log("play");
 }
 
 function pause() {
   song.pause();
-  pauseStartTime = new Date();
   paused = true;
   console.log("pause");
 }
@@ -261,13 +274,6 @@ function miss() {
   combo = 0;
 }
 
-function retry(){
-  console.log("clicked retry")
-  if(btnRetry.mousePressed){
-    btnRetry.hide()
-  } 
-}
-
 function displayResults() {
   if (endLoop === 0) {
     endingCredits.play();
@@ -276,10 +282,6 @@ function displayResults() {
     console.log("misses: " + numMisses);
     console.log("hits: " + numHits);
     console.log("accuracy: " + accuracy + "%");
-    btnRetry.size(200 * PX, 65 * PX);
-    btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
-    btnRetry.mousePressed(retry);
-    btnRetry.show()
   }
   endLoop++;
   background(0);
@@ -296,6 +298,8 @@ function displayResults() {
     textSize(24);
     text("Full Combo!", HALF, 640 * PX);
   }
+  // image(btnRetry, HALF - 75 * PX, 700 * PX, 150 * PX, 50 * PX);
+  // btnRetry.position(HALF, 700 * PX);
 }
 
 function keyPressed() {
@@ -366,13 +370,15 @@ const slices = () => {
   let lastAngle = 0;
   for (let i = 0; i < 8; i++) {
     if (i === activeSlice()) {
-      fill(190, 183, 223);
+      // fill(190, 183, 223);
+      fill(SLICE_COLOR);
+      if (currBreak) fill(0);
       strokeWeight(0);
       arc(
         0,
         0,
-        edgeLength - NOTE_SIZE - 3,
-        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3 * PX,
+        edgeLength - NOTE_SIZE - 3 * PX,
         lastAngle,
         lastAngle + radians(45)
       );
@@ -382,8 +388,8 @@ const slices = () => {
       arc(
         0,
         0,
-        edgeLength - NOTE_SIZE - 3,
-        edgeLength - NOTE_SIZE - 3,
+        edgeLength - NOTE_SIZE - 3 * PX,
+        edgeLength - NOTE_SIZE - 3 * PX,
         lastAngle,
         lastAngle + radians(45)
       );
@@ -406,7 +412,7 @@ const landingRegion = () => {
         lastAngle + radians(45)
       );
     } else {
-      fill(190, 183, 223); // purple
+      fill(190, 183, 223); // white-purple
       arc(
         0,
         0,
@@ -435,55 +441,163 @@ const barNote = (radius, notePath) => {
   arc(0, 0, radius, radius, angle, angle + radians(45));
 };
 
+const flashGetReady = (endTime) => {
+  const time = endTime - approachTime;
+  if (currTime > time - 500) {
+    // do nothing
+  } else if (currTime > time - 1000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  } else if (currTime > time - 1500) {
+    // do nothing
+  } else if (currTime > time - 2000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  } else if (currTime > time - 2500) {
+    // do nothing
+  } else if (currTime > time - 3000) {
+    // show warning
+    image(warningSign, HALF - 50 * PX, HALF - 50 * PX, 100 * PX, 100 * PX);
+  }
+};
+
+function displayResults() {
+  if (endLoop === 0) {
+    cursor();
+    dateTime = new Date();
+    endingCredits.play();
+    applause.play();
+    applause.onended(() => wedidit.play());
+    drawingContext.shadowBlur = 0;
+  }
+  endLoop++;
+  background(0);
+  image(endbg, 0, 0, SCREEN, SCREEN);
+  if (accuracy == 100) {
+    image(rankS, 80 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 93) {
+    image(rankA, 85 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 83) {
+    image(rankB, 95 * PX, 145 * PX, 280 * PX, 330 * PX);
+  } else if (accuracy > 73) {
+    image(rankC, 85 * PX, 145 * PX, 270 * PX, 330 * PX);
+  } else {
+    image(rankD, 85 * PX, 145 * PX, 270 * PX, 330 * PX);
+  }
+  image(hitsIcon, 450 * PX, 200 * PX, 60 * PX, 60 * PX);
+  image(missesIcon, 450 * PX, 280 * PX, 60 * PX, 60 * PX);
+  image(accuracyIcon, 450 * PX, 360 * PX, 60 * PX, 60 * PX);
+  fill(255);
+  // fill(241, 241, 241);
+  fill(242, 242, 242);
+  stroke(0);
+  strokeWeight(3 * PX);
+  textAlign(LEFT);
+  textSize(40 * PX);
+  text(track.title, 60 * PX, 85 * PX);
+  textSize(12 * PX);
+  text(dateTime.toString(), 60 * PX, 110 * PX);
+  textAlign(RIGHT);
+  textSize(56 * PX);
+  text(nfc(numHits), 720 * PX, 247 * PX);
+  text(nfc(numMisses), 720 * PX, 327 * PX);
+  text(accuracy + "%", 720 * PX, 407 * PX);
+  textAlign(CENTER);
+  textSize(80 * PX);
+  text(nfc(score), HALF, 545 * PX);
+  textAlign(RIGHT);
+  textSize(48 * PX);
+  image(maxComboIcon, 200 * PX, 575 * PX, 200 * PX, 80 * PX);
+  text(nfc(maxCombo), 530 * PX, 630 * PX);
+  textSize(20 * PX);
+  text("x" + nfc(numAttempts), 740 * PX, 780 * PX);
+  textAlign(LEFT);
+  const seconds = Math.floor((songDuration / 1000) % 60);
+  const minutes = Math.floor(songDuration / 1000 / 60);
+  text(minutes + ":" + seconds, 60 * PX, 780 * PX);
+  const numStars = Math.floor(track.difficulty);
+  //stars
+  for (i = 0; i < numStars; i++) {
+    image(star, 60 * PX + i * 30 * PX, 15 * PX, 30 * PX, 30 * PX);
+  }
+  image(
+    star,
+    60 * PX + numStars * 30 * PX,
+    15 * PX,
+    (track.difficulty - numStars) * 30 * PX,
+    30 * PX,
+    0,
+    0,
+    40 * PX,
+    40 * PX,
+    COVER,
+    LEFT
+  );
+  textSize(20 * PX);
+  textAlign(LEFT);
+  text(track.difficulty, 95 * PX + numStars * 30 * PX, 37 * PX);
+}
+
 function draw() {
   if (notesFinished && songEnded) {
     clear();
-    displayResults();
+    displayResults(p5);
   } else {
+    currTime = Math.floor(song.currentTime() * 1000) - DELAY;
     background(0);
+    if (trackBg) image(trackBg, 0, 0, SCREEN, SCREEN);
     // text
     let fps = frameRate();
+    drawingContext.shadowBlur = 0;
     fill(255);
     stroke(0);
+    strokeWeight(3 * PX);
     textAlign(LEFT);
     textSize(SCREEN / 15);
     text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
     textSize(SCREEN / 28);
-    text("%" + nfc(accuracy), SCREEN / 80, SCREEN / 28);
+    text(nfc(accuracy) + "%", SCREEN / 80, SCREEN / 28);
     textAlign(RIGHT);
     textSize(SCREEN / 28);
     text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
     textSize(SCREEN / 66);
     text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
-
-    let timePaused = pauseTime;
-    if (paused) {
-      timePaused += new Date() - pauseStartTime;
-    }
-    playTime = new Date() - startTime - timePaused - DELAY;
     // progress bar
     stroke(255, 0, 0);
-    strokeWeight(12);
-    x = map(playTime, 0, songDuration, 0, SCREEN);
+    strokeWeight(8 * PX);
+    x = map(currTime, 0, songDuration, 0, SCREEN);
     line(0, 0, x, 0);
-
+    // PIE GLOW
+    fill(255);
+    strokeWeight(0);
+    drawingContext.shadowColor = "white";
+    drawingContext.shadowBlur = 50 * PX;
+    ellipse(HALF, HALF, edgeLength + NOTE_SIZE);
+    drawingContext.shadowBlur = 0;
     translate(HALF, HALF);
     rotate(radians(-90 - 45 / 2));
-
     // HIT ZONE
     noFill();
-    strokeWeight(4);
+    strokeWeight(0);
     stroke(255);
     landingRegion();
-
     // pie slices
     strokeWeight(0);
+    drawingContext.shadowBlur = 2 * PX;
+    if (SHOW_SLICES) {
+      drawingContext.shadowColor = "rgb(190, 183, 223)";
+    } else {
+      drawingContext.shadowColor = "rgb(0, 0, 0)";
+    }
     slices();
-
+    drawingContext.shadowBlur = 0;
     // NOTES
     noFill();
     strokeWeight(NOTE_SIZE * 2);
-    stroke(255, 0, 0);
+    stroke(NOTE_COLOR);
+    drawingContext.shadowBlur = 50 * PX;
+    drawingContext.shadowColor = NOTE_GLOW;
+    // stroke(255, 0, 0);
     try {
       if (
         notes.length === 0 &&
@@ -496,7 +610,7 @@ function draw() {
       // notesToPlay
       if (notesToPlay.length > 0) {
         let note = notesToPlay[0];
-        if (note.time < playTime) {
+        if (note.time < currTime) {
           playSound(note.sound);
           landed[note.path] = true; // turn green
           setTimeout(() => {
@@ -505,10 +619,29 @@ function draw() {
           notesToPlay.shift();
         }
       }
+      // breaks
+      if (breaksLeft.length > 0) {
+        const nextBreak = breaksLeft[0];
+        if (currTime > nextBreak.startTime) {
+          currBreak = true; // todo turn off active slice
+          const halftime =
+            nextBreak.startTime + nextBreak.endTime - nextBreak.startTime;
+          if (currTime > halftime && currTime < halftime + 2000) {
+            // todo add health mechanics
+            // todo play section pass/fail sound
+            // todo show section pass/fail icon
+          }
+          flashGetReady(nextBreak.endTime);
+          if (currTime > nextBreak.endTime - approachTime) {
+            breaksLeft.shift();
+            currBreak = false;
+          }
+        }
+      }
       // notes
       if (notes.length > 0) {
-        let nextNote = notes[0];
-        if (playTime > nextNote.time - approachTime) {
+        const nextNote = notes[0];
+        if (currTime > nextNote.time - approachTime) {
           numPlayedNotes++;
           activeNotes.push(nextNote);
           notes.shift();
@@ -517,11 +650,8 @@ function draw() {
       // activeNotes
       if (activeNotes.length > 0) {
         activeNotes.forEach((note, i) => {
-          const life = (note.time - playTime) / approachTime; // (.52) percent of life the note has left;
+          const life = (note.time - currTime) / approachTime; // (.52) percent of life the note has left;
           const radius = edgeLength - Math.floor(edgeLength * life); // where the note should be based on the timestamp
-          // note.xPos = distance * note.xPath + HALF;
-          // note.yPos = distance * note.yPath + HALF;
-          // ellipse(note.xPos, note.yPos, NOTE_SIZE);
           barNote(radius, note.path);
           //collision check
           if (
@@ -541,7 +671,6 @@ function draw() {
             activeNotes.splice(i, 1);
           }
           if (note.played) return;
-
           //exit check
           if (radius > edgeLength + NOTE_SIZE * 4) {
             activeNotes.shift();
@@ -555,14 +684,17 @@ function draw() {
       console.log(e);
       pause();
     }
-
     rotate(radians(90 + 45 / 2));
     translate(-HALF, -HALF);
+    drawingContext.shadowColor = "white";
+    drawingContext.shadowBlur = 30 * PX;
+    // MOUSE LINE
+    strokeWeight(CURSOR_SIZE * PX);
+    stroke(CURSOR_COLOR);
+    line(mouseX, mouseY, pmouseX, pmouseY);
+    // ANCHOR CIRCLE
     noStroke();
     strokeWeight(0);
-
-    // ANCHOR CIRCLE
-    fill(35, 116, 171); // blue
     fill(255);
     ellipse(HALF, HALF, NOTE_SIZE);
   }
