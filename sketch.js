@@ -11,7 +11,6 @@ let combo = 0;
 let maxCombo = 0;
 let notesFinished = false;
 let songEnded = false;
-let endLoop = 0;
 let paused = false;
 let currBreak = false;
 let numPlayedNotes = 0;
@@ -28,9 +27,10 @@ let track = {
   audio: `res/tracks/${TRACK_NAME}/audio.mp3`,
 };
 let approachTime;
+let breakData;
 let breaksLeft = [];
+let noteData;
 let notes = [];
-let trackNotes = [];
 let activeNotes = [];
 let notesToPlay = []; // array of timing points to play hit sound;
 let edgeLength;
@@ -145,6 +145,7 @@ function setup() {
   hitWhistle.setVolume(0.5);
   hitFinish.setVolume(0.5);
   hitClap.setVolume(0.5);
+  song.setVolume(0.5);
 
   createCanvas(SCREEN, SCREEN);
   noCursor();
@@ -201,18 +202,44 @@ function start(data) {
   console.log(track);
   if (track.bgImage)
     trackBg = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
-  if (track.breaks) breaksLeft = track.breaks;
-  notes = track.notes;
-  trackNotes = notes;
+  noteData = JSON.stringify(track.notes);
+  breakData = JSON.stringify(track.breaks);
+  notes = JSON.parse(noteData);
+  breaksLeft = JSON.parse(breakData);
   const AR = track.approachRate;
-  song.setVolume(0.5);
+  approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   song.stop();
   song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
     if (!paused) songEnded = true;
   });
-  approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
+}
+
+function retry() {
+  btnRetry.hide();
+  numAttempts++;
+  notes = JSON.parse(noteData);
+  breaksLeft = JSON.parse(breakData);
+  console.log(track);
+  notesToPlay = [];
+  activeNotes = [];
+  score = 0;
+  combo = 0;
+  maxCombo = 0;
+  paused = false;
+  numPlayedNotes = 0;
+  accuracy = 0; // numHits / numHits + numMisses * 2
+  numHits = 0;
+  numMisses = 0;
+  notesFinished = false;
+  endingCredits.stop();
+  applause.stop();
+  wedidit.stop();
+  song.stop();
+  song.play();
+  songEnded = false;
+  loop();
 }
 
 function play() {
@@ -267,54 +294,28 @@ function miss() {
   combo = 0;
 }
 
-function displayResults() {
-  if (endLoop === 0) {
-    endingCredits.play();
-    applause.play();
-    applause.onended(() => wedidit.play());
-    console.log("misses: " + numMisses);
-    console.log("hits: " + numHits);
-    console.log("accuracy: " + accuracy + "%");
-  }
-  endLoop++;
-  background(0);
-  image(endbg, 0, 0, SCREEN, SCREEN);
-  fill(255);
-  stroke(0);
-  strokeWeight(2);
-  textAlign(CENTER);
-  textSize(56);
-  text("Score: " + nfc(score), HALF, 550 * PX);
-  textSize(48);
-  text("Max Combo: " + nfc(maxCombo), HALF, 600 * PX);
-  if (numPlayedNotes === maxCombo) {
-    textSize(24);
-    text("Full Combo!", HALF, 640 * PX);
-  }
+function endSong() {
+  console.log("stage complete");
+  songEnded = true;
+  song.stop();
 }
 
 function keyPressed() {
   // console.log(keyCode);
   if (keyCode === 32) {
     if (notesFinished) {
-      console.log("stage complete");
-      songEnded = true;
-      song.stop();
+      endSong();
     } else paused ? play() : pause();
     return false; // prevent scroll
   }
   if (keyCode === 13) {
     if (notesFinished) {
-      console.log("stage complete");
-      songEnded = true;
-      song.stop();
+      endSong();
     } else paused ? play() : pause();
   }
   if (keyCode === 27) {
     if (notesFinished) {
-      console.log("stage complete");
-      songEnded = true;
-      song.stop();
+      endSong();
     } else paused ? play() : pause();
   }
 }
@@ -457,39 +458,16 @@ const flashGetReady = (endTime) => {
   }
 };
 
-function retry() {
-  btnRetry.hide();
-  numAttempts++;
-  notes = trackNotes;
-  score = 0;
-  combo = 0;
-  maxCombo = 0;
-  notesFinished = false;
-  songEnded = false;
-  endLoop = 0;
-  paused = false;
-  currBreak = false;
-  numPlayedNotes = 0;
-  accuracy = 0; // numHits / numHits + numMisses * 2
-  numHits = 0;
-  numMisses = 0;
-  song.stop();
-  song.play();
-  if (track.breaks) breaksLeft = track.breaks;
-}
-
 function displayResults() {
-  if (endLoop === 0) {
-    cursor();
-    dateTime = new Date();
-    endingCredits.play();
-    applause.play();
-    applause.onended(() => wedidit.play());
-    drawingContext.shadowBlur = 0;
-    btnRetry.mousePressed(retry);
-    btnRetry.show();
-  }
-  endLoop++;
+  noLoop();
+  cursor();
+  dateTime = new Date();
+  endingCredits.play();
+  applause.play();
+  applause.onended(() => wedidit.play());
+  drawingContext.shadowBlur = 0;
+  btnRetry.mousePressed(retry);
+  btnRetry.show();
   background(0);
   image(endbg, 0, 0, SCREEN, SCREEN);
   if (accuracy == 100) {
