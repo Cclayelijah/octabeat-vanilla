@@ -1,4 +1,4 @@
-const TRACK_NAME = "miiro";
+const TRACK_NAME = "gohma";
 const DELAY = 0;
 const SHOW_SLICES = false;
 const CURSOR_SIZE = 14;

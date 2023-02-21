@@ -10,7 +10,7 @@ let maxCombo = 0;
 let notesFinished = false;
 let songEnded = false;
 let endLoop = 0;
-let paused = true;
+let paused = false;
 let currTime; // song.currentTime() - DELAY
 let songDuration;
 let track = {
