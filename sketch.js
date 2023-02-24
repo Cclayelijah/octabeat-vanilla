@@ -1,10 +1,12 @@
 p5.disableFriendlyErrors = true; // disables FES to boost performance
 let WIDTH;
 let HEIGHT;
-let SCREEN;
+let SIZE;
 let HALF;
 let PX;
 let NOTE_SIZE;
+let mobile = 0;
+let posX, posY;
 let fs = false;
 let score = 0;
 let combo = 0;
@@ -50,7 +52,8 @@ let song,
   wedidit,
   comboBreak;
 // image files
-let trackBg,
+let opad,
+  trackBg,
   endbg,
   hitsIcon,
   missesIcon,
@@ -83,6 +86,7 @@ let trackBg,
   warningSign;
 
 function preload() {
+  // sound
   soundFormats("mp3", "ogg", "wav");
   song = loadSound(track.audio);
   myFont = loadFont("res/Inconsolata-Regular.ttf");
@@ -94,16 +98,17 @@ function preload() {
   applause = loadSound("res/sounds/applause.wav");
   wedidit = loadSound("res/sounds/wedidit.wav");
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
-
+  // dom
+  // btnBack = createImg("res/images/pause-back.png");
+  // btnContinue = createImg("res/images/pause-continue.png");
+  btnRetry = createImg("res/images/pause-retry.png");
+  opad = createImg("res/images/opad.png");
   // images
   endbg = loadImage("res/images/endbg.jpg");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
   accuracyIcon = loadImage("res/images/accuracy.png");
   maxComboIcon = loadImage("res/images/ranking-maxcombo.png");
-  btnBack = createImage("res/images/pause-back.png");
-  btnContinue = createImage("res/images/pause-continue.png");
-  btnRetry = createImg("res/images/pause-retry.png");
   rankS = loadImage("res/images/ranking-S.png");
   rankA = loadImage("res/images/ranking-A.png");
   rankB = loadImage("res/images/ranking-B.png");
@@ -131,15 +136,23 @@ function preload() {
 function setup() {
   WIDTH = windowWidth;
   HEIGHT = windowHeight;
-  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
-  HALF = SCREEN / 2;
-  PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
+  SIZE = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
+  HALF = SIZE / 2;
+  PX = SIZE / 800; // PX = 1 if SIZE = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
   ellipseMode(RADIUS);
-  edgeLength = SCREEN / 2 - 75;
+  edgeLength = SIZE / 2 - 75;
   cornerLength =
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
   landed = [false, false, false, false, false, false, false, false];
+  if (HEIGHT > WIDTH) {
+    mobile = 1;
+    if (HEIGHT > WIDTH * 1.5) mobile = 2;
+    opad.show();
+  } else {
+    mobile = 0;
+    opad.hide();
+  }
 
   hitNormal.setVolume(0.5);
   hitWhistle.setVolume(0.5);
@@ -147,7 +160,7 @@ function setup() {
   hitClap.setVolume(0.5);
   song.setVolume(0.5);
 
-  createCanvas(SCREEN, SCREEN);
+  createCanvas(SIZE, SIZE);
   noCursor();
   textFont(myFont);
   textSize(24);
@@ -166,19 +179,33 @@ function setup() {
   btnRetry.size(200 * PX, 65 * PX);
   btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
   btnRetry.hide();
+  if (mobile == 2) opad.size(400 * PX, 400 * PX);
+  if (mobile == 1) opad.size(200, 200);
+  if (mobile == 2) opad.position(WIDTH - 600 * PX, HEIGHT - 450 * PX);
+  if (mobile == 1) {
+    opad.position(WIDTH - 220, HEIGHT - 220);
+  }
 }
 
 function windowResized() {
   WIDTH = windowWidth;
   HEIGHT = windowHeight;
-  SCREEN = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
-  HALF = SCREEN / 2;
-  PX = SCREEN / 800; // PX = 1 if SCREEN = 800, adjusts to screen size/resolution;
+  SIZE = WIDTH >= HEIGHT ? HEIGHT : WIDTH;
+  HALF = SIZE / 2;
+  PX = SIZE / 800; // PX = 1 if SIZE = 800, adjusts to screen size/resolution;
   NOTE_SIZE = 12 * PX;
-  edgeLength = SCREEN / 2 - 75;
+  edgeLength = SIZE / 2 - 75;
   cornerLength =
     Math.sqrt(edgeLength * edgeLength + edgeLength * edgeLength) / 2;
-  resizeCanvas(SCREEN, SCREEN);
+  resizeCanvas(SIZE, SIZE);
+  if (HEIGHT > WIDTH) {
+    mobile = 1;
+    if (HEIGHT > WIDTH * 1.5) mobile = 2;
+    opad.show();
+  } else {
+    mobile = 0;
+    opad.hide();
+  }
 
   anchorPoints = [
     { x: HALF, y: HALF - edgeLength, active: false },
@@ -193,6 +220,10 @@ function windowResized() {
 
   btnRetry.size(200 * PX, 65 * PX);
   btnRetry.position(WIDTH / 2 - 100 * PX, 700 * PX);
+  if (mobile == 2) opad.size(400 * PX, 400 * PX);
+  if (mobile == 1) opad.size(200, 200);
+  if (mobile == 2) opad.position(WIDTH - 600 * PX, HEIGHT - 450 * PX);
+  if (mobile == 1) opad.position(WIDTH - 220, HEIGHT - 220);
 }
 
 function start(data) {
@@ -217,6 +248,7 @@ function start(data) {
 }
 
 function retry() {
+  noCursor();
   btnRetry.hide();
   numAttempts++;
   notes = JSON.parse(noteData);
@@ -279,7 +311,7 @@ function adjustAccuracy() {
   accuracy = Math.floor((100 * numHits) / (numHits + numMisses * 2));
 }
 
-function hit(region) {
+function hit() {
   numHits++;
   adjustAccuracy();
   score += 5000 + 93 * combo;
@@ -321,8 +353,7 @@ function keyPressed() {
 }
 
 function doubleClicked() {
-  fs = !fs;
-  fullscreen(fs);
+  fullscreen(true);
 }
 
 const activeSlice = () => {
@@ -350,9 +381,22 @@ const activeSlice = () => {
     slice = 6;
   } else {
     // mouse
-    let shortestLength = SCREEN;
+    let shortestLength = SIZE;
     anchorPoints.forEach((b, i) => {
-      const d = dist(b.x, b.y, mouseX, mouseY);
+      if (mobile) {
+        if (mobile == 2) {
+          posY = 400 * PX + (mouseY - HEIGHT + 250 * PX) * 1.5;
+          posX = 400 * PX + (mouseX - 400 * PX) * 1.5;
+        }
+        if (mobile == 1) {
+          posY = 400 * PX + (mouseY - HEIGHT + 120) * 3;
+          posX = 400 * PX + (mouseX - WIDTH + 120) * 3;
+        }
+      } else {
+        posX = mouseX;
+        posY = mouseY;
+      }
+      const d = dist(b.x, b.y, posX, posY);
       if (shortestLength > d) {
         shortestLength = d;
         slice = i;
@@ -369,7 +413,7 @@ const slices = () => {
     if (i === activeSlice()) {
       // fill(190, 183, 223);
       fill(SLICE_COLOR);
-      if (currBreak) fill(0);
+      if (currBreak || notesFinished) fill(0);
       strokeWeight(0);
       arc(
         0,
@@ -469,7 +513,7 @@ function displayResults() {
   btnRetry.mousePressed(retry);
   btnRetry.show();
   background(0);
-  image(endbg, 0, 0, SCREEN, SCREEN);
+  image(endbg, 0, 0, SIZE, SIZE);
   if (accuracy == 100) {
     image(rankS, 80 * PX, 145 * PX, 280 * PX, 330 * PX);
   } else if (accuracy > 93) {
@@ -542,7 +586,7 @@ function draw() {
   } else {
     currTime = Math.floor(song.currentTime() * 1000) - DELAY;
     background(0);
-    if (trackBg) image(trackBg, 0, 0, SCREEN, SCREEN);
+    if (trackBg) image(trackBg, 0, 0, SIZE, SIZE);
     // text
     let fps = frameRate();
     drawingContext.shadowBlur = 0;
@@ -550,19 +594,21 @@ function draw() {
     stroke(0);
     strokeWeight(3 * PX);
     textAlign(LEFT);
-    textSize(SCREEN / 15);
-    text(nfc(combo), SCREEN / 80, SCREEN - SCREEN / 80);
-    textSize(SCREEN / 28);
-    text(nfc(accuracy) + "%", SCREEN / 80, SCREEN / 28);
+    textSize(SIZE / 15);
+    text(nfc(combo), SIZE / 80, SIZE - SIZE / 80);
+    textSize(SIZE / 28);
+    text(nfc(accuracy) + "%", SIZE / 80, SIZE / 28);
     textAlign(RIGHT);
-    textSize(SCREEN / 28);
-    text(nfc(score), SCREEN - SCREEN / 80, SCREEN / 28);
-    textSize(SCREEN / 66);
-    text("FPS: " + fps.toFixed(2), SCREEN - SCREEN / 80, SCREEN - SCREEN / 80);
+    textSize(SIZE / 28);
+    text(nfc(score), SIZE - SIZE / 80, SIZE / 28);
+    textSize(SIZE / 66);
+    text("FPS: " + fps.toFixed(2), SIZE - SIZE / 80, SIZE - SIZE / 80);
     // progress bar
+    drawingContext.shadowColor = "black";
+    drawingContext.shadowBlur = 12 * PX;
     stroke(255, 0, 0);
     strokeWeight(8 * PX);
-    x = map(currTime, 0, songDuration, 0, SCREEN);
+    x = map(currTime, 0, songDuration, 0, SIZE);
     line(0, 0, x, 0);
     // PIE GLOW
     fill(255);
@@ -663,7 +709,7 @@ function draw() {
               sound: note.hitSound,
               path: note.path,
             });
-            hit(note.path);
+            hit();
             note.played = true;
             activeNotes.splice(i, 1);
           }
@@ -685,10 +731,32 @@ function draw() {
     translate(-HALF, -HALF);
     drawingContext.shadowColor = "white";
     drawingContext.shadowBlur = 30 * PX;
+    // MOBILE DPAD
+    if (mobile) {
+      fill(SLICE_COLOR);
+      strokeWeight(NOTE_SIZE * 2);
+      stroke(CURSOR_COLOR);
+      ellipse(HALF, HEIGHT - edgeLength - NOTE_SIZE);
+    }
+
     // MOUSE LINE
     strokeWeight(CURSOR_SIZE * PX);
     stroke(CURSOR_COLOR);
-    line(mouseX, mouseY, pmouseX, pmouseY);
+    let pPosX, pPosY;
+    if (mobile) {
+      if (mobile == 2) {
+        pPosY = 400 * PX + (pmouseY - HEIGHT + 250 * PX) * 1.5;
+        pPosX = 400 * PX + (pmouseX - 400 * PX) * 1.5;
+      }
+      if (mobile == 1) {
+        pPosY = 400 * PX + (pmouseY - HEIGHT + 120) * 3;
+        pPosX = 400 * PX + (pmouseX - WIDTH + 120) * 3;
+      }
+    } else {
+      pPosY = pmouseY;
+      pPosX = pmouseX;
+    }
+    line(posX, posY, pPosX, pPosY);
     // ANCHOR CIRCLE
     noStroke();
     strokeWeight(0);
