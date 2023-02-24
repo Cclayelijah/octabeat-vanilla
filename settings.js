@@ -1,4 +1,4 @@
-const TRACK_NAME = "soukai";
+const TRACK_NAME = "logoff";
 const DELAY = 0;
 const SHOW_SLICES = false;
 const CURSOR_SIZE = 14;
