@@ -6,14 +6,15 @@ HOW TO RUN LOCALLY
 2. open command line, navigate to directory you want to clone the repo in, and run
    `git clone <url>`.
 3. run a local server
-   -install visual studio code & 'live server' extension.
+   -install visual studio code and the 'live server' extension.
    -open repository in vscode
    -click "Go Live" in bottom right
-4. from game screen, choose a .osu file in same directory as the track.audio file in sketch.js
+4. change trackName in settings.js to a song you want to play in the res/tracks/ directory.
+5. start game by uploading a .osu file in the same directory as res/tracks/{trackName}/.
 
-HOW TO UPDATE TO THE LATEST CODE
+HOW TO UPDATE YOUR LOCAL CODE
 
-1. open terminal in same directory as the repo
+1. open terminal in same directory as the repo (ctrl + ~)
 2. run `git pull`
 
 HOW TO CONTRIBUTE
