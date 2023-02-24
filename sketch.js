@@ -640,11 +640,11 @@ function draw() {
     stroke(NOTE_COLOR);
     drawingContext.shadowBlur = 50 * PX;
     drawingContext.shadowColor = NOTE_GLOW;
-    // stroke(255, 0, 0);
     try {
       if (
         notes.length === 0 &&
         activeNotes.length === 0 &&
+        notesToPlay.length === 0 &&
         numPlayedNotes > 0
       ) {
         notesFinished = true;
