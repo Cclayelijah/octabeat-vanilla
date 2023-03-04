@@ -122,7 +122,7 @@ async function extract(contents) {
     const distance = shortestDistance(path, lastPath);
     totalPathLength += distance == 0 ? 500 : 1000;
     lastPath = path;
-    notes.push({ path, time, type, hitSound, played: false });
+    notes.push({ path, time, type, hitSound });
   });
 
   const duration = notes[notes.length - 1].time - notes[0].time;
