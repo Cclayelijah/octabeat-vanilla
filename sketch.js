@@ -260,11 +260,13 @@ function start(data) {
   const AR = track.approachRate;
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   song.stop();
-  song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
     if (!paused) songEnded = true;
   });
+  setTimeout(() => {
+    song.play();
+  }, 3000);
 }
 
 function retry() {
