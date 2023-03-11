@@ -1,8 +1,9 @@
-const TRACK_NAME = "gohma";
+const TRACK_NAME = "stonebank";
 const DELAY = 0;
 // *** VISUAL ***
 const SHOW_SLICES = false;
 const CURSOR_SIZE = 14;
+const ANALYZE_AUDIO = false;
 const ANCHOR_BEAT = true; // anchor circle grows in size with the beat
 const IMAGE_TILT = true; // bg image tilt on beat
 const SHOW_PARTICLES = true; // greatly affect performance on some browsers
