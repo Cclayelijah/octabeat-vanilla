@@ -892,16 +892,18 @@ function draw() {
   }
   line(posX, posY, pPosX, pPosY);
   // ANCHOR CIRCLE
-  drawingContext.shadowBlur = 0;
-  noStroke();
-  fill(255, 255, 255);
-  ellipse(
-    WIDTH / 2,
-    HALF,
-    ANCHOR_BEAT && ANALYZE_AUDIO
-      ? map(amp, 0, 250, 6 * PX, 12 * PX) + (amp > 210 ? 2 : 0)
-      : 10 * PX
-  );
+  if (!notesFinished) {
+    drawingContext.shadowBlur = 0;
+    noStroke();
+    fill(255, 255, 255);
+    ellipse(
+      WIDTH / 2,
+      HALF,
+      ANCHOR_BEAT && ANALYZE_AUDIO
+        ? map(amp, 0, 250, 6 * PX, 12 * PX) + (amp > 210 ? 2 : 0)
+        : 10 * PX
+    );
+  }
 }
 
 class Particle {
