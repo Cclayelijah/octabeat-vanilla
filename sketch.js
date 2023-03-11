@@ -159,8 +159,10 @@ function setup() {
     opad.hide();
   }
 
-  fft = new p5.FFT();
-  fft.setInput(song);
+  if (ANALYZE_AUDIO) {
+    fft = new p5.FFT();
+    fft.setInput(song);
+  }
   hitNormal.setVolume(0.5);
   hitWhistle.setVolume(0.5);
   hitFinish.setVolume(0.5);
@@ -258,11 +260,13 @@ function start(data) {
   const AR = track.approachRate;
   approachTime = 1800 - (AR < 5 ? 120 * AR : 120 * 5 + 150 * (AR - 5));
   song.stop();
-  song.play();
   songDuration = song.duration() * 1000;
   song.onended(() => {
     if (!paused) songEnded = true;
   });
+  setTimeout(() => {
+    song.play();
+  }, 3000);
 }
 
 function retry() {
@@ -641,12 +645,15 @@ function draw() {
   translate(WIDTH / 2, HALF);
   imageMode(CENTER);
   rectMode(CENTER);
-  fft.analyze();
-  amp = fft.getEnergy(20, 200);
-  push();
-  if (amp > 225 && IMAGE_TILT) {
-    rotate(random(radians(-0.5), radians(0.5)));
+  if (ANALYZE_AUDIO) {
+    fft.analyze();
+    amp = fft.getEnergy(20, 200);
+    push();
+    if (amp > 225 && IMAGE_TILT) {
+      rotate(random(radians(-0.5), radians(0.5)));
+    }
   }
+
   image(
     trackBg,
     0,
@@ -659,13 +666,17 @@ function draw() {
     HEIGHT,
     COVER
   );
-  pop();
+  if (ANALYZE_AUDIO) {
+    pop();
+  }
   translate(-WIDTH / 2, -HALF);
   // dark filter
-  let alpha = OPACITY_FLICKER ? map(amp, 0, 255, 150, 200) : 160;
+  let alpha =
+    OPACITY_FLICKER && ANALYZE_AUDIO ? map(amp, 0, 255, 150, 200) : 160;
   fill(0, alpha);
   noStroke();
   rect(WIDTH / 2, HALF, WIDTH, HEIGHT);
+
   // text
   let fps = frameRate();
   drawingContext.shadowBlur = 0;
@@ -720,7 +731,7 @@ function draw() {
   drawingContext.shadowBlur = 0;
 
   // audio visualization
-  if (SHOW_WAVEFORM) {
+  if (SHOW_WAVEFORM && ANALYZE_AUDIO) {
     push();
     rotate(radians(90 + 45 / 2));
     stroke(SLICE_COLOR);
@@ -839,7 +850,7 @@ function draw() {
     pause();
   }
   // particles
-  if (fps > 30 && SHOW_PARTICLES) {
+  if (fps > 30 && SHOW_PARTICLES && ANALYZE_AUDIO) {
     let p1 = new Particle();
     particles.push(p1);
     for (i = particles.length - 1; i >= 0; i--) {
@@ -887,7 +898,7 @@ function draw() {
   ellipse(
     WIDTH / 2,
     HALF,
-    ANCHOR_BEAT
+    ANCHOR_BEAT && ANALYZE_AUDIO
       ? map(amp, 0, 250, 6 * PX, 12 * PX) + (amp > 210 ? 2 : 0)
       : 10 * PX
   );
