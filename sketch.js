@@ -240,19 +240,16 @@ function start(data) {
   getAudioContext().resume();
   track = data;
   console.log(track);
-  let img = new Image();
-  img.src = `res/tracks/${TRACK_NAME}/` + track.bgImage;
-  if (img.height != 0)
-    trackBg = loadImage(
-      `res/tracks/${TRACK_NAME}/` + track.bgImage,
-      () => {
-        console.log("loaded");
-      },
-      () => {
-        console.log("failed to load image");
-        trackBg = loadImage("res/images/retro-city.jpg");
-      }
-    );
+  trackBg = loadImage(
+    `res/tracks/${TRACK_NAME}/` + track.bgImage,
+    () => {
+      console.log("loaded");
+    },
+    () => {
+      console.log("failed to load image");
+      trackBg = loadImage("res/images/retro-city.jpg");
+    }
+  );
   noteData = JSON.stringify(track.notes);
   breakData = JSON.stringify(track.breaks);
   notes = JSON.parse(noteData);
@@ -266,7 +263,7 @@ function start(data) {
   });
   setTimeout(() => {
     song.play();
-  }, 3000);
+  }, 1000);
 }
 
 function retry() {
