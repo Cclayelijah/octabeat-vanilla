@@ -557,27 +557,9 @@ function displayResults() {
   } else {
     image(rankD, 105 * PX, 145 * PX, 270 * PX, 330 * PX);
   }
-  image(
-    hitsIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    200 * PX,
-    60 * PX,
-    60 * PX
-  );
-  image(
-    missesIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    280 * PX,
-    60 * PX,
-    60 * PX
-  );
-  image(
-    accuracyIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    360 * PX,
-    60 * PX,
-    60 * PX
-  );
+  image(hitsIcon, WIDTH - 340 * PX, 200 * PX, 60 * PX, 60 * PX);
+  image(missesIcon, WIDTH - 340 * PX, 280 * PX, 60 * PX, 60 * PX);
+  image(accuracyIcon, WIDTH - 340 * PX, 360 * PX, 60 * PX, 60 * PX);
   fill(255);
   // fill(241, 241, 241);
   fill(242, 242, 242);
@@ -613,6 +595,7 @@ function displayResults() {
   for (i = 0; i < numStars; i++) {
     image(star, WIDTH - 220 * PX - i * 30 * PX, 85 * PX, 30 * PX, 30 * PX);
   }
+  console.log((track.difficulty - numStars) * 30 * PX);
   image(
     star,
     WIDTH - 190 * PX,
@@ -621,8 +604,8 @@ function displayResults() {
     30 * PX,
     0,
     0,
-    40 * PX,
-    40 * PX,
+    80 * PX,
+    80 * PX,
     COVER,
     LEFT
   );
