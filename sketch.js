@@ -250,13 +250,6 @@ function start(data) {
       trackBg = loadImage("res/images/retro-city.jpg");
     }
   );
-  // if (imageLoaded) trackBg = image;
-  // try {
-  //   image = loadImage(`res/tracks/${TRACK_NAME}/` + track.bgImage);
-  // } catch {
-  //   console.log("hello world");
-  //   trackBg = loadImage("res/images/retro-city.jpg");
-  // }
   noteData = JSON.stringify(track.notes);
   breakData = JSON.stringify(track.breaks);
   notes = JSON.parse(noteData);
