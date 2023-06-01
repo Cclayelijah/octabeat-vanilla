@@ -5,10 +5,13 @@ let SIZE;
 let HALF;
 let PX;
 let NOTE_SIZE;
+const HPDRAIN = 5;
+const PURPLE = [190, 183, 223];
 let screen;
 let mobile = 0;
 let posX, posY;
 let fs = false;
+let health = 85;
 let score = 0;
 let combo = 0;
 let maxCombo = 0;
@@ -53,12 +56,14 @@ let song,
   endingCredits,
   applause,
   wedidit,
+  failsound,
   comboBreak;
 // image files
 let opad,
   trackBg,
   defaultBg,
   endbg,
+  failbg,
   hitsIcon,
   missesIcon,
   accuracyIcon,
@@ -102,6 +107,7 @@ function preload() {
   applause = loadSound("res/sounds/applause.wav");
   wedidit = loadSound("res/sounds/wedidit.wav");
   comboBreak = loadSound("res/sounds/combobreakoriginal.wav");
+  failsound = loadSound("res/sounds/failsound.mp3");
   // dom
   // btnBack = createImg("res/images/pause-back.png");
   // btnContinue = createImg("res/images/pause-continue.png");
@@ -110,6 +116,7 @@ function preload() {
   // images
   endbg = loadImage("res/images/space.jpg");
   trackBg = loadImage("res/images/retro-city.jpg");
+  failbg = loadImage("res/images/menu-background.jpg");
   hitsIcon = loadImage("res/images/hits.png");
   missesIcon = loadImage("res/images/misses.png");
   accuracyIcon = loadImage("res/images/accuracy.png");
@@ -168,6 +175,10 @@ function setup() {
   hitFinish.setVolume(0.5);
   hitClap.setVolume(0.5);
   song.setVolume(0.5);
+  song.addCue(0, () => {
+    console.log("started");
+    // loop();
+  });
 
   createCanvas(WIDTH, mobile ? SIZE : HEIGHT);
   noCursor();
@@ -240,19 +251,16 @@ function start(data) {
   getAudioContext().resume();
   track = data;
   console.log(track);
-  let img = new Image();
-  img.src = `res/tracks/${TRACK_NAME}/` + track.bgImage;
-  if (img.height != 0)
-    trackBg = loadImage(
-      `res/tracks/${TRACK_NAME}/` + track.bgImage,
-      () => {
-        console.log("loaded");
-      },
-      () => {
-        console.log("failed to load image");
-        trackBg = loadImage("res/images/retro-city.jpg");
-      }
-    );
+  trackBg = loadImage(
+    `res/tracks/${TRACK_NAME}/` + track.bgImage,
+    () => {
+      console.log("loaded");
+    },
+    () => {
+      console.log("failed to load image");
+      trackBg = loadImage("res/images/retro-city.jpg");
+    }
+  );
   noteData = JSON.stringify(track.notes);
   breakData = JSON.stringify(track.breaks);
   notes = JSON.parse(noteData);
@@ -266,7 +274,7 @@ function start(data) {
   });
   setTimeout(() => {
     song.play();
-  }, 3000);
+  }, 1000);
 }
 
 function retry() {
@@ -278,6 +286,8 @@ function retry() {
   console.log(track);
   notesToPlay = [];
   activeNotes = [];
+  health = 100;
+  console.log(health);
   score = 0;
   combo = 0;
   maxCombo = 0;
@@ -287,13 +297,15 @@ function retry() {
   numHits = 0;
   numMisses = 0;
   notesFinished = false;
+  songEnded = false;
   particles = [];
   endingCredits.stop();
+  failsound.stop();
   applause.stop();
   wedidit.stop();
   song.stop();
   song.play();
-  songEnded = false;
+  clear();
   loop();
 }
 
@@ -341,6 +353,9 @@ function adjustAccuracy() {
 function hit() {
   numHits++;
   adjustAccuracy();
+  if (health < 100) {
+    health += 1;
+  }
   score += 5000 + 93 * combo;
   combo++;
   if (combo > maxCombo) maxCombo = combo;
@@ -351,6 +366,11 @@ function miss() {
   adjustAccuracy();
   if (combo > 10) comboBreak.play();
   combo = 0;
+  const subtract = Math.floor(
+    HPDRAIN + health * (HPDRAIN / 100) + (HPDRAIN - (HPDRAIN * accuracy) / 100)
+  );
+  console.log("- " + subtract + " HP");
+  health -= subtract;
 }
 
 function endSong() {
@@ -480,7 +500,7 @@ const landingRegion = () => {
         lastAngle + radians(45)
       );
     } else {
-      fill(190, 183, 223); // white-purple
+      fill(PURPLE); // white-purple
       arc(
         0,
         0,
@@ -529,6 +549,48 @@ const flashGetReady = (endTime) => {
   }
 };
 
+function showFailScreen() {
+  noLoop();
+  cursor();
+  song.pause();
+  failsound.play();
+  dateTime = new Date();
+  drawingContext.shadowBlur = 0;
+  btnRetry.mousePressed(retry);
+  btnRetry.show();
+  background(0);
+  imageMode(CORNER);
+  rectMode(CORNER);
+  image(failbg, 0, 0, WIDTH, HEIGHT, 0, 0, WIDTH, HEIGHT, COVER);
+  // dark background
+  noStroke();
+  fill(0, 0, 0, 80);
+  rect(0, 0, WIDTH, HEIGHT);
+  fill(255);
+  // fill(241, 241, 241);
+  fill(242, 242, 242);
+  stroke(0);
+  strokeWeight(3 * PX);
+  textAlign(LEFT);
+  textSize(40 * PX);
+  text(track.title, 90 * PX, 80 * PX);
+  textSize(12 * PX);
+  text(dateTime.toString(), 90 * PX, 105 * PX);
+  textAlign(RIGHT);
+  textAlign(CENTER);
+  textSize(80 * PX);
+  text("YOU FAILED", WIDTH / 2, 400 * PX);
+  textAlign(RIGHT);
+  textSize(20 * PX);
+  text("x" + nfc(numAttempts), WIDTH - 90 * PX, 780 * PX);
+  textAlign(LEFT);
+  let seconds = Math.floor((songDuration / 1000) % 60);
+  let minutes = Math.floor(songDuration / 1000 / 60);
+  const textSeconds = seconds < 10 ? "0" + seconds : "" + seconds;
+  const textMinutes = minutes < 10 ? "0" + minutes : "" + minutes;
+  text(textMinutes + ":" + textSeconds, 90 * PX, 780 * PX); // todo fix formatting
+}
+
 function displayResults() {
   noLoop();
   cursor();
@@ -560,27 +622,9 @@ function displayResults() {
   } else {
     image(rankD, 105 * PX, 145 * PX, 270 * PX, 330 * PX);
   }
-  image(
-    hitsIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    200 * PX,
-    60 * PX,
-    60 * PX
-  );
-  image(
-    missesIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    280 * PX,
-    60 * PX,
-    60 * PX
-  );
-  image(
-    accuracyIcon,
-    mobile == 0 ? WIDTH / 2 + 60 * PX : WIDTH - 340 * PX,
-    360 * PX,
-    60 * PX,
-    60 * PX
-  );
+  image(hitsIcon, WIDTH - 340 * PX, 200 * PX, 60 * PX, 60 * PX);
+  image(missesIcon, WIDTH - 340 * PX, 280 * PX, 60 * PX, 60 * PX);
+  image(accuracyIcon, WIDTH - 340 * PX, 360 * PX, 60 * PX, 60 * PX);
   fill(255);
   // fill(241, 241, 241);
   fill(242, 242, 242);
@@ -624,8 +668,8 @@ function displayResults() {
     30 * PX,
     0,
     0,
-    40 * PX,
-    40 * PX,
+    80 * PX,
+    80 * PX,
     COVER,
     LEFT
   );
@@ -640,7 +684,15 @@ function draw() {
     displayResults();
     return;
   }
+  if (health < -10) {
+    console.log("failure");
+    song.jump();
+    clear();
+    showFailScreen();
+    return;
+  }
   currTime = Math.floor(song.currentTime() * 1000) - DELAY;
+  // console.log(currTime);
   background(0);
   translate(WIDTH / 2, HALF);
   imageMode(CENTER);
@@ -687,7 +739,7 @@ function draw() {
   textSize(60 * PX);
   text(nfc(combo), 10 * PX, (mobile ? SIZE : HEIGHT) - 10 * PX);
   textSize(30 * PX);
-  text(nfc(accuracy) + "%", 10 * PX, 40 * PX);
+  text(nfc(accuracy) + "%", 10 * PX, 80 * PX);
   textAlign(RIGHT);
   textSize(30 * PX);
   text(nfc(score), WIDTH - 10 * PX, 40 * PX);
@@ -697,13 +749,41 @@ function draw() {
     WIDTH - 10 * PX,
     (mobile ? SIZE : HEIGHT) - 10 * PX
   );
-  // progress bar
+
+  // PROGRESS
+  fill(51);
+  ellipse(WIDTH - 40 * PX, 80 * PX, 16 * PX);
+  drawingContext.shadowColor = PURPLE;
+  drawingContext.shadowBlur = 12 * PX;
+  stroke(PURPLE);
+  strokeWeight(0);
+  fill(255);
+  x = map(currTime, 0, songDuration, 0, 360);
+  arc(
+    WIDTH - 40 * PX,
+    80 * PX,
+    16 * PX,
+    16 * PX,
+    PI + HALF_PI,
+    PI + HALF_PI + radians(x),
+    PIE
+  );
+
+  // HP/HEALTH BAR
   drawingContext.shadowColor = "black";
   drawingContext.shadowBlur = 12 * PX;
-  stroke(255, 0, 0);
+  stroke(0);
+  line(0, 30 * PX, 350 * PX, 30 * PX);
+  if (health >= 100) {
+    stroke(0, 255, 51);
+  } else if (health > 10) {
+    stroke(190, 183, 223);
+  } else {
+    stroke(255, 0, 0);
+  }
   strokeWeight(18 * PX);
-  x = map(currTime, 0, songDuration, 0, WIDTH);
-  line(0, 0, x, 0);
+  x = map(health, 0, 100, 0, 350 * PX);
+  line(0, 30 * PX, x, 30 * PX);
 
   // PIE GLOW
   fill(255);
@@ -790,7 +870,6 @@ function draw() {
         const halftime =
           nextBreak.startTime + nextBreak.endTime - nextBreak.startTime;
         if (currTime > halftime && currTime < halftime + 2000) {
-          // todo add health mechanics
           // todo play section pass/fail sound
           // todo show section pass/fail icon
           if (accuracy > 83) {
@@ -892,16 +971,35 @@ function draw() {
   }
   line(posX, posY, pPosX, pPosY);
   // ANCHOR CIRCLE
-  drawingContext.shadowBlur = 0;
-  noStroke();
-  fill(255, 255, 255);
-  ellipse(
-    WIDTH / 2,
-    HALF,
-    ANCHOR_BEAT && ANALYZE_AUDIO
-      ? map(amp, 0, 250, 6 * PX, 12 * PX) + (amp > 210 ? 2 : 0)
-      : 10 * PX
-  );
+  if (!notesFinished) {
+    drawingContext.shadowBlur = 0;
+    noStroke();
+    fill(255, 255, 255);
+    ellipse(
+      WIDTH / 2,
+      HALF,
+      ANCHOR_BEAT && ANALYZE_AUDIO
+        ? map(amp, 0, 250, 6 * PX, 12 * PX) + (amp > 210 ? 2 : 0)
+        : 10 * PX
+    );
+  }
+}
+
+function pieChart(diameter, data) {
+  let lastAngle = 0;
+  for (let i = 0; i < data.length; i++) {
+    let gray = map(i, 0, data.length, 0, 255);
+    fill(gray);
+    arc(
+      width / 2,
+      height / 2,
+      diameter,
+      diameter,
+      lastAngle,
+      lastAngle + radians(angles[i])
+    );
+    lastAngle += radians(angles[i]);
+  }
 }
 
 class Particle {

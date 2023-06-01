@@ -1,3 +1,5 @@
 .vscode
 .DS_Store
 res/.DS_Store
+res/tracks/tracks
+res/tracks/ncs
