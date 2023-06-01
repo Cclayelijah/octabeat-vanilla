@@ -692,7 +692,7 @@ function draw() {
     return;
   }
   currTime = Math.floor(song.currentTime() * 1000) - DELAY;
-  console.log(currTime);
+  // console.log(currTime);
   background(0);
   translate(WIDTH / 2, HALF);
   imageMode(CENTER);
